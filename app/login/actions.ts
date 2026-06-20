@@ -40,10 +40,10 @@ export async function signUp(
 
   if (error) return { error: error.message };
 
-  return {
-    message:
-      "Check your inbox to confirm your email, then sign in. We're glad you're here.",
-  };
+  // Email confirmation is off, so the user is signed in immediately —
+  // send them straight to the dashboard.
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 export async function signOut() {
