@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   signIn,
   signUp,
@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   const action =
     mode === "signin" ? signIn : mode === "signup" ? signUp : requestPasswordReset;
-  const [state, formAction] = useFormState(action, initial);
+  const [state, formAction] = useActionState(action, initial);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { updatePassword, type AuthState } from "@/app/login/actions";
 
 const initial: AuthState = {};
@@ -19,7 +20,7 @@ function SubmitButton() {
 }
 
 export default function UpdatePasswordPage() {
-  const [state, formAction] = useFormState(updatePassword, initial);
+  const [state, formAction] = useActionState(updatePassword, initial);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
