@@ -74,7 +74,7 @@ export default async function DashboardPage() {
           </p>
           <p className="mx-auto mt-2 max-w-md text-muted-foreground">
             No one is waiting today. When you make a promise, the person attached
-            to it will show up here — and you'll get to keep your word.
+            to it will show up here — and you’ll get to keep your word.
           </p>
           {/* Phase 2 lands the real "make a promise" flow here. */}
           <button className="mt-6 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition hover:bg-primary/90">

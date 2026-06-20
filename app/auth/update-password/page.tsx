@@ -29,7 +29,7 @@ export default function UpdatePasswordPage() {
           Choose a new password
         </h1>
         <p className="mb-6 text-center text-sm text-muted-foreground">
-          You're almost back in.
+          You’re almost back in.
         </p>
         <form action={formAction} className="space-y-3">
           <input
