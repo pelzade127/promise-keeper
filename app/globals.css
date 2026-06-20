@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  PROMISE KEEPER — Design System
+  --------------------------------
+  Feeling: calm, warm, trustworthy, relational, minimal.
+  Primary is EVERGREEN — the color of constancy and faithfulness, the thing
+  that stays green when everything else fades. Linen paper underneath, a warm
+  plum-ink for text, and a devotional gold reserved for encouragement moments.
+
+  Variables are HSL triples so they drop straight into shadcn/ui components.
+*/
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 40 33% 94%;        /* linen  #F6F2EA */
+    --foreground: 38 14% 16%;        /* ink    warm plum-charcoal */
+    --card: 40 43% 98%;              /* paper, lifted off the linen */
+    --card-foreground: 38 14% 16%;
+    --popover: 40 43% 98%;
+    --popover-foreground: 38 14% 16%;
+
+    /* Brand: evergreen = faithfulness */
+    --primary: 156 33% 27%;          /* evergreen #2F5D50 */
+    --primary-foreground: 40 43% 98%;
+
+    /* Secondary: a soft sage tint of the primary */
+    --secondary: 150 16% 88%;
+    --secondary-foreground: 156 33% 22%;
+
+    /* Accent: devotional gold — used sparingly, for "well done" */
+    --accent: 36 56% 52%;            /* gold #C9923E */
+    --accent-foreground: 38 30% 12%;
+
+    /* Quiet / muted */
+    --muted: 40 24% 90%;
+    --muted-foreground: 38 9% 42%;
+
+    /* Gentle, never alarming — overdue uses warmth, not red */
+    --destructive: 12 45% 48%;       /* muted clay-rose */
+    --destructive-foreground: 40 43% 98%;
+
+    --border: 40 18% 85%;
+    --input: 40 18% 85%;
+    --ring: 156 33% 35%;
+
+    --radius: 0.85rem;               /* soft, rounded — never sharp/corporate */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "kern", "liga", "calt";
+  }
+
+  /* Display face carries the warmth of the product. */
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+  }
+}
+
+/* A faint paper texture: extremely subtle, keeps the linen from feeling flat. */
+.linen-grain {
+  background-image: radial-gradient(
+    hsl(38 14% 16% / 0.018) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 6px 6px;
+}
