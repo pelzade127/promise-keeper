@@ -13,6 +13,9 @@ type Mode = "signin" | "signup" | "reset";
 
 const initial: AuthState = {};
 
+const fieldClass =
+  "w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30";
+
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
@@ -26,15 +29,75 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-const fieldClass =
-  "w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30";
-
-export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>("signin");
-
+/**
+ * The form is a separate component, remounted via `key={mode}` whenever the
+ * mode changes. That guarantees a fresh useActionState each time — so a
+ * sign-in screen can never carry over a stale sign-up error, and the submit
+ * always fires the action that matches the visible mode.
+ */
+function AuthForm({ mode }: { mode: Mode }) {
   const action =
     mode === "signin" ? signIn : mode === "signup" ? signUp : requestPasswordReset;
   const [state, formAction] = useActionState(action, initial);
+
+  return (
+    <form action={formAction} className="space-y-3">
+      {mode === "signup" && (
+        <input
+          name="display_name"
+          placeholder="What should we call you?"
+          autoComplete="name"
+          className={fieldClass}
+        />
+      )}
+
+      <input
+        name="email"
+        type="email"
+        required
+        placeholder="Email"
+        autoComplete="email"
+        className={fieldClass}
+      />
+
+      {mode !== "reset" && (
+        <input
+          name="password"
+          type="password"
+          required
+          minLength={6}
+          placeholder="Password"
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          className={fieldClass}
+        />
+      )}
+
+      {state.error && (
+        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {state.error}
+        </p>
+      )}
+      {state.message && (
+        <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
+          {state.message}
+        </p>
+      )}
+
+      <SubmitButton
+        label={
+          mode === "signin"
+            ? "Sign in"
+            : mode === "signup"
+              ? "Create account"
+              : "Send reset link"
+        }
+      />
+    </form>
+  );
+}
+
+export default function LoginPage() {
+  const [mode, setMode] = useState<Mode>("signin");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -46,68 +109,17 @@ export default function LoginPage() {
           <h1 className="mt-3 font-display text-3xl leading-tight text-foreground">
             {mode === "signin" && "Welcome back."}
             {mode === "signup" && "Begin keeping your word."}
-            {mode === "reset" && "Let's get you back in."}
+            {mode === "reset" && "Let’s get you back in."}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {mode === "signin" && "The people you remember are waiting."}
             {mode === "signup" &&
-              "Every promise has a person attached. Let's remember them together."}
-            {mode === "reset" && "Enter your email and we'll send a reset link."}
+              "Every promise has a person attached. Let’s remember them together."}
+            {mode === "reset" && "Enter your email and we’ll send a reset link."}
           </p>
         </div>
 
-        <form action={formAction} className="space-y-3">
-          {mode === "signup" && (
-            <input
-              name="display_name"
-              placeholder="What should we call you?"
-              autoComplete="name"
-              className={fieldClass}
-            />
-          )}
-
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="Email"
-            autoComplete="email"
-            className={fieldClass}
-          />
-
-          {mode !== "reset" && (
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              placeholder="Password"
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              className={fieldClass}
-            />
-          )}
-
-          {state.error && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {state.error}
-            </p>
-          )}
-          {state.message && (
-            <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
-              {state.message}
-            </p>
-          )}
-
-          <SubmitButton
-            label={
-              mode === "signin"
-                ? "Sign in"
-                : mode === "signup"
-                  ? "Create account"
-                  : "Send reset link"
-            }
-          />
-        </form>
+        <AuthForm mode={mode} key={mode} />
 
         <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
           {mode === "signin" && (
