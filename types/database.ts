@@ -13,6 +13,28 @@ export type PromiseStatus = "active" | "completed" | "released";
 export type PromiseRecurrence =
   | "none" | "daily" | "weekly" | "biweekly" | "monthly" | "custom";
 export type FollowUpType = "none" | "one_time" | "recurring";
+
+/** Result shape returned by server actions (a plain module so "use server" files can import, not export, it). */
+export type ActionResult = { error?: string };
+
+/** Input for creating a promise via the person-first flow. */
+export interface CreatePromiseInput {
+  // Person — exactly one of these is provided by the flow.
+  personId?: string; // an existing person
+  newPersonName?: string; // a brand-new person to create
+
+  // The promise itself
+  title: string;
+  categoryId?: string;
+  whyItMatters?: string;
+  promiseType: PromiseType;
+  recurrence?: PromiseRecurrence;
+  recurrenceIntervalDays?: number;
+  dueDate?: string; // YYYY-MM-DD
+  reminderEnabled: boolean;
+  followUpType: FollowUpType;
+  followUpIntervalDays?: number;
+}
 export type JournalEntryType =
   | "reflection" | "prayer" | "update" | "follow_up" | "note" | "memory";
 export type PromiseEventType =
@@ -21,7 +43,7 @@ export type PromiseEventType =
 export type MissedReason =
   | "forgot" | "got_busy" | "avoided" | "circumstances_changed" | "no_longer_relevant";
 
-export interface Person {
+export type Person = {
   id: string;
   user_id: string;
   name: string;
@@ -32,7 +54,7 @@ export interface Person {
   updated_at: string;
 }
 
-export interface Category {
+export type Category = {
   id: string;
   user_id: string;
   name: string;
@@ -44,7 +66,7 @@ export interface Category {
   updated_at: string;
 }
 
-export interface Promise {
+export type Promise = {
   id: string;
   user_id: string;
   title: string;
@@ -71,7 +93,7 @@ export interface Promise {
 }
 
 /** A promise row with its person and category joined in (dashboard shape). */
-export interface PromiseWithRelations extends Promise {
+export type PromiseWithRelations = Promise & {
   person: Pick<Person, "id" | "name"> | null;
   category: Pick<Category, "id" | "name" | "color"> | null;
 }
@@ -83,9 +105,26 @@ export interface PromiseWithRelations extends Promise {
 export interface Database {
   public: {
     Tables: {
-      people: { Row: Person; Insert: Partial<Person>; Update: Partial<Person> };
-      categories: { Row: Category; Insert: Partial<Category>; Update: Partial<Category> };
-      promises: { Row: Promise; Insert: Partial<Promise>; Update: Partial<Promise> };
+      people: {
+        Row: Person;
+        Insert: Partial<Person>;
+        Update: Partial<Person>;
+        Relationships: [];
+      };
+      categories: {
+        Row: Category;
+        Insert: Partial<Category>;
+        Update: Partial<Category>;
+        Relationships: [];
+      };
+      promises: {
+        Row: Promise;
+        Insert: Partial<Promise>;
+        Update: Partial<Promise>;
+        Relationships: [];
+      };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
   };
 }

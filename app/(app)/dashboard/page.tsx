@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { getDashboardData } from "@/lib/dashboard";
 import { PromiseCard } from "@/components/promise-card";
-import { SignOutButton } from "@/components/sign-out-button";
+import { AppNav } from "@/components/app-nav";
 import type { PromiseWithRelations } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -47,24 +48,20 @@ export default async function DashboardPage() {
 
   return (
     <div className="container py-10 sm:py-14">
-      <header className="mb-10 flex items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <p className="font-display text-sm uppercase tracking-[0.2em] text-primary">
-            Promise Keeper
+      <AppNav />
+
+      <header className="mb-10 max-w-2xl">
+        {/* The signature: names treated as the content, set in the display face. */}
+        <h1 className="font-display text-4xl leading-[1.1] text-foreground sm:text-5xl">
+          Today you can be faithful to…
+        </h1>
+        {data.peopleWaiting > 0 && (
+          <p className="mt-4 text-muted-foreground">
+            {data.peopleWaiting === 1
+              ? "1 person is waiting on your follow-through."
+              : `${data.peopleWaiting} people are waiting on your follow-through.`}
           </p>
-          {/* The signature: names treated as the content, set in the display face. */}
-          <h1 className="mt-3 font-display text-4xl leading-[1.1] text-foreground sm:text-5xl">
-            Today you can be faithful to…
-          </h1>
-          {data.peopleWaiting > 0 && (
-            <p className="mt-4 text-muted-foreground">
-              {data.peopleWaiting === 1
-                ? "1 person is waiting on your follow-through."
-                : `${data.peopleWaiting} people are waiting on your follow-through.`}
-            </p>
-          )}
-        </div>
-        <SignOutButton />
+        )}
       </header>
 
       {nothingPending ? (
@@ -76,10 +73,12 @@ export default async function DashboardPage() {
             No one is waiting today. When you make a promise, the person attached
             to it will show up here — and you’ll get to keep your word.
           </p>
-          {/* Phase 2 lands the real "make a promise" flow here. */}
-          <button className="mt-6 rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition hover:bg-primary/90">
+          <Link
+            href="/promises/new"
+            className="mt-6 inline-block rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition hover:bg-primary/90"
+          >
             Make a promise
-          </button>
+          </Link>
         </div>
       ) : (
         <>
