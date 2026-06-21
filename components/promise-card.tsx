@@ -9,6 +9,7 @@ import {
   recommitPromise,
   releasePromise,
   completeFollowUp,
+  dismissFollowUp,
 } from "@/app/(app)/promises/actions";
 
 type Mode = null | "complete" | "recommit" | "release" | "checkin";
@@ -59,13 +60,19 @@ function formatDue(p: PromiseWithRelations, today: string): string {
 export function PromiseCard({
   promise,
   today,
+  context = "default",
 }: {
   promise: PromiseWithRelations;
   today: string;
+  context?: "default" | "followup";
 }) {
   const router = useRouter();
   const isSelf = promise.target_type === "self";
-  const who = isSelf ? "Yourself" : (promise.person?.name ?? "Someone");
+  const who = isSelf
+    ? "Yourself"
+    : promise.target_type === "group"
+      ? (promise.group?.name ?? "Your group")
+      : (promise.person?.name ?? "Someone");
 
   const isOverdue =
     promise.due_date != null &&
@@ -115,7 +122,7 @@ export function PromiseCard({
             {followUpDue ? "Time to check in" : formatDue(promise, today)}
           </span>
           <div className="flex flex-wrap justify-end gap-1.5">
-            {followUpDue && (
+            {(followUpDue || context === "followup") && (
               <button
                 onClick={() => setMode("checkin")}
                 className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground transition hover:bg-accent/90"
@@ -123,24 +130,42 @@ export function PromiseCard({
                 I checked in
               </button>
             )}
-            <button
-              onClick={() => setMode("complete")}
-              className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
-            >
-              Complete
-            </button>
-            <button
-              onClick={() => setMode("recommit")}
-              className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              Recommit
-            </button>
-            <button
-              onClick={() => setMode("release")}
-              className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              Release
-            </button>
+            {context !== "followup" && (
+              <>
+                <button
+                  onClick={() => setMode("complete")}
+                  className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
+                >
+                  Complete
+                </button>
+                <button
+                  onClick={() => setMode("recommit")}
+                  className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  Recommit
+                </button>
+              </>
+            )}
+            {context === "followup" ? (
+              <button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  await dismissFollowUp(promise.id);
+                  router.refresh();
+                }}
+                className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-50"
+              >
+                Done with this
+              </button>
+            ) : (
+              <button
+                onClick={() => setMode("release")}
+                className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              >
+                Release
+              </button>
+            )}
           </div>
         </div>
       </article>

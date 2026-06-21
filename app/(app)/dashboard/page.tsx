@@ -14,10 +14,12 @@ function Section({
   title,
   promises,
   today,
+  context = "default",
 }: {
   title: string;
   promises: PromiseWithRelations[];
   today: string;
+  context?: "default" | "followup";
 }) {
   if (promises.length === 0) return null;
   return (
@@ -27,7 +29,7 @@ function Section({
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {promises.map((p) => (
-          <PromiseCard key={p.id} promise={p} today={today} />
+          <PromiseCard key={p.id} promise={p} today={today} context={context} />
         ))}
       </div>
     </section>
@@ -88,6 +90,7 @@ export default async function DashboardPage() {
             title="Time to follow up"
             promises={data.followUps}
             today={today}
+            context="followup"
           />
           <Section
             title="Ongoing care"

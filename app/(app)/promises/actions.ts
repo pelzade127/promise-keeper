@@ -24,23 +24,31 @@ export async function createPromise(
 
   if (!input.title.trim()) return { error: "Give the promise a title." };
 
-  // 1. Resolve the person — create one if this is someone new.
-  let personId = input.personId ?? null;
+  const target = input.target ?? "person";
 
-  if (!personId && input.newPersonName?.trim()) {
-    const { data: person, error: personError } = await supabase
-      .from("people")
-      .insert({ user_id: user.id, name: input.newPersonName.trim() })
-      .select("id")
-      .single();
+  // 1. Resolve the target.
+  let personId: string | null = null;
+  let groupId: string | null = null;
 
-    if (personError || !person) {
-      return { error: "Couldn't add that person. Please try again." };
+  if (target === "person") {
+    personId = input.personId ?? null;
+    if (!personId && input.newPersonName?.trim()) {
+      const { data: person, error: personError } = await supabase
+        .from("people")
+        .insert({ user_id: user.id, name: input.newPersonName.trim() })
+        .select("id")
+        .single();
+      if (personError || !person) {
+        return { error: "Couldn't add that person. Please try again." };
+      }
+      personId = person.id;
     }
-    personId = person.id;
+    if (!personId) return { error: "Choose who this promise is for." };
+  } else if (target === "group") {
+    groupId = input.groupId ?? null;
+    if (!groupId) return { error: "Choose which group this promise is for." };
   }
-
-  if (!personId) return { error: "Choose who this promise is for." };
+  // target === "self": both stay null.
 
   // 2. Work out the follow-up date, if any.
   const isOpenEnded = input.promiseType === "open_ended_care";
@@ -55,8 +63,9 @@ export async function createPromise(
     title: input.title.trim(),
     why_it_matters: input.whyItMatters?.trim() || null,
     category_id: input.categoryId || null,
-    target_type: "person",
+    target_type: target,
     person_id: personId,
+    group_id: groupId,
     promise_type: input.promiseType,
     status: "active",
     recurrence:
@@ -286,6 +295,26 @@ export async function completeFollowUp(
     note: promise.title,
     reflection: note?.trim() || null,
   });
+
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/** Stop a follow-up without releasing the promise (clears the next check-in). */
+export async function dismissFollowUp(
+  promiseId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase
+    .from("promises")
+    .update({ next_follow_up_date: null })
+    .eq("id", promiseId);
+  if (error) return { error: "Couldn't update that." };
 
   revalidatePath("/dashboard");
   return {};

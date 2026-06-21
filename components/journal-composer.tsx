@@ -14,10 +14,12 @@ const TYPES: [string, string][] = [
 
 export function JournalComposer({
   personId,
-  personName,
+  groupId,
+  name,
 }: {
-  personId: string;
-  personName: string;
+  personId?: string;
+  groupId?: string;
+  name: string;
 }) {
   const router = useRouter();
   const [entryType, setEntryType] = useState("note");
@@ -32,7 +34,7 @@ export function JournalComposer({
       return;
     }
     setSaving(true);
-    const res = await addJournalEntry({ personId, entryType, content });
+    const res = await addJournalEntry({ personId, groupId, entryType, content });
     setSaving(false);
     if (res?.error) {
       setError(res.error);
@@ -64,7 +66,7 @@ export function JournalComposer({
         value={content}
         onChange={(e) => setContent(e.target.value)}
         rows={3}
-        placeholder={`Something about ${personName}…`}
+        placeholder={`Something about ${name}…`}
         className="w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
       />
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}

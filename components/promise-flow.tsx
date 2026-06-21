@@ -7,12 +7,14 @@ import type {
   PromiseType,
   PromiseRecurrence,
   FollowUpType,
+  PromiseTarget,
   CreatePromiseInput,
 } from "@/types/database";
 
 type Person = { id: string; name: string };
+type Group = { id: string; name: string };
 type Category = { id: string; name: string; color: string | null };
-type Step = "ask" | "select" | "newPerson" | "details";
+type Step = "target" | "ask" | "select" | "newPerson" | "selectGroup" | "details";
 
 const field =
   "w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30";
@@ -21,21 +23,34 @@ const label = "block text-sm font-medium text-foreground mb-1.5";
 
 export function PromiseFlow({
   people,
+  groups,
   categories,
   preselectedPerson = null,
+  preselectedGroup = null,
 }: {
   people: Person[];
+  groups: Group[];
   categories: Category[];
   preselectedPerson?: Person | null;
+  preselectedGroup?: Group | null;
 }) {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>(preselectedPerson ? "details" : "ask");
+  const initialStep: Step =
+    preselectedPerson || preselectedGroup ? "details" : "target";
+  const [step, setStep] = useState<Step>(initialStep);
+  const [target, setTarget] = useState<PromiseTarget>(
+    preselectedGroup ? "group" : "person",
+  );
   const [chosenPerson, setChosenPerson] = useState<Person | null>(
     preselectedPerson,
   );
+  const [chosenGroup, setChosenGroup] = useState<Group | null>(
+    preselectedGroup,
+  );
   const [newPersonName, setNewPersonName] = useState("");
   const [query, setQuery] = useState("");
+  const [groupQuery, setGroupQuery] = useState("");
 
   // Promise details
   const [title, setTitle] = useState("");
@@ -57,7 +72,18 @@ export function PromiseFlow({
     return people.filter((p) => p.name.toLowerCase().includes(q));
   }, [people, query]);
 
-  const whoName = chosenPerson?.name ?? newPersonName.trim();
+  const groupMatches = useMemo(() => {
+    const q = groupQuery.trim().toLowerCase();
+    if (!q) return groups;
+    return groups.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groups, groupQuery]);
+
+  const whoName =
+    target === "self"
+      ? "yourself"
+      : target === "group"
+        ? (chosenGroup?.name ?? "your group")
+        : (chosenPerson?.name ?? newPersonName.trim());
   const isOpenEnded = promiseType === "open_ended_care";
 
   async function handleSubmit() {
@@ -69,8 +95,11 @@ export function PromiseFlow({
     setSubmitting(true);
 
     const input: CreatePromiseInput = {
-      personId: chosenPerson?.id,
-      newPersonName: chosenPerson ? undefined : newPersonName.trim(),
+      target,
+      personId: target === "person" ? chosenPerson?.id : undefined,
+      newPersonName:
+        target === "person" && !chosenPerson ? newPersonName.trim() : undefined,
+      groupId: target === "group" ? chosenGroup?.id : undefined,
       title,
       categoryId: categoryId || undefined,
       whyItMatters: why || undefined,
@@ -86,7 +115,6 @@ export function PromiseFlow({
     };
 
     const res = await createPromise(input);
-    // On success the action redirects; we only reach here on error.
     if (res?.error) {
       setError(res.error);
       setSubmitting(false);
@@ -101,6 +129,53 @@ export function PromiseFlow({
       >
         ← Back to dashboard
       </button>
+
+      {/* STEP 0 — Who/what is this promise for? */}
+      {step === "target" && (
+        <div>
+          <h1 className="font-display text-3xl text-foreground">
+            Who is this promise for?
+          </h1>
+          <div className="mt-6 grid gap-3">
+            <button
+              onClick={() => {
+                setTarget("person");
+                setStep(people.length ? "ask" : "newPerson");
+              }}
+              className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-sm"
+            >
+              <p className="font-medium text-foreground">A person</p>
+              <p className="text-sm text-muted-foreground">
+                Someone you want to show up for.
+              </p>
+            </button>
+            <button
+              onClick={() => {
+                setTarget("group");
+                setStep("selectGroup");
+              }}
+              className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-sm"
+            >
+              <p className="font-medium text-foreground">A group</p>
+              <p className="text-sm text-muted-foreground">
+                A family, small group, or team.
+              </p>
+            </button>
+            <button
+              onClick={() => {
+                setTarget("self");
+                setStep("details");
+              }}
+              className="rounded-lg border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-sm"
+            >
+              <p className="font-medium text-foreground">Myself</p>
+              <p className="text-sm text-muted-foreground">
+                A promise to your own growth.
+              </p>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* STEP 1 — Is this person already in your list? */}
       {step === "ask" && (
@@ -132,9 +207,7 @@ export function PromiseFlow({
               <p className="font-medium text-foreground">
                 No — this is someone new
               </p>
-              <p className="text-sm text-muted-foreground">
-                Add them to your list.
-              </p>
+              <p className="text-sm text-muted-foreground">Add them to your list.</p>
             </button>
           </div>
         </div>
@@ -217,11 +290,59 @@ export function PromiseFlow({
         </div>
       )}
 
+      {/* STEP 2c — Select a group */}
+      {step === "selectGroup" && (
+        <div>
+          <h1 className="font-display text-3xl text-foreground">
+            Which group?
+          </h1>
+          {groups.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-border bg-card/60 p-6 text-center text-muted-foreground">
+              You haven't made any groups yet. Create one on the{" "}
+              <button
+                onClick={() => router.push("/groups")}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Groups page
+              </button>{" "}
+              first.
+            </p>
+          ) : (
+            <>
+              <input
+                autoFocus
+                value={groupQuery}
+                onChange={(e) => setGroupQuery(e.target.value)}
+                placeholder="Type part of the group's name…"
+                className={`${field} mt-4`}
+              />
+              <div className="mt-4 space-y-2">
+                {groupMatches.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      setChosenGroup(g);
+                      setStep("details");
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-left transition hover:border-primary"
+                  >
+                    <span className="font-medium text-foreground">{g.name}</span>
+                    <span className="text-sm text-muted-foreground">Select →</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* STEP 3 — Promise details */}
       {step === "details" && (
         <div>
           <h1 className="font-display text-3xl text-foreground">
-            Your promise to {whoName || "them"}
+            {target === "self"
+              ? "Your promise to yourself"
+              : `Your promise to ${whoName || "them"}`}
           </h1>
 
           <div className="mt-6 space-y-5">
@@ -231,7 +352,7 @@ export function PromiseFlow({
                 autoFocus
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Pray for Sarah's job search"
+                placeholder="e.g. Pray for the group this week"
                 className={field}
               />
             </div>
@@ -273,7 +394,7 @@ export function PromiseFlow({
                     [
                       "open_ended_care",
                       "Ongoing care",
-                      "No deadline — just showing up for them.",
+                      "No deadline — just showing up.",
                     ],
                   ] as const
                 ).map(([value, name, desc]) => (
@@ -328,12 +449,10 @@ export function PromiseFlow({
             )}
 
             <div>
-              <label className={label}>Follow up with them?</label>
+              <label className={label}>Follow up afterward?</label>
               <select
                 value={followUpType}
-                onChange={(e) =>
-                  setFollowUpType(e.target.value as FollowUpType)
-                }
+                onChange={(e) => setFollowUpType(e.target.value as FollowUpType)}
                 className={field}
               >
                 <option value="none">No follow-up</option>

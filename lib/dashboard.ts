@@ -26,30 +26,43 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   const today = todayISO();
 
-  // RLS already scopes to this user; we still filter for clarity + index use.
+  // Active promises drive the overdue / today / open-care sections.
   const { data: promises } = await supabase
     .from("promises")
     .select(
-      `*, person:people ( id, name ), category:categories ( id, name, color )`,
+      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color )`,
     )
     .eq("status", "active")
     .order("due_date", { ascending: true });
 
+  // Follow-ups are queried independently: a check-in is usually due *after* a
+  // one-time promise is completed, so it must not be limited to active rows.
+  const { data: followUpData } = await supabase
+    .from("promises")
+    .select(
+      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color )`,
+    )
+    .not("next_follow_up_date", "is", null)
+    .lte("next_follow_up_date", today)
+    .neq("status", "released")
+    .order("next_follow_up_date", { ascending: true });
+
   const rows = (promises ?? []) as unknown as PromiseWithRelations[];
+  const followUps = (followUpData ?? []) as unknown as PromiseWithRelations[];
 
   const overdue: PromiseWithRelations[] = [];
   const dueToday: PromiseWithRelations[] = [];
-  const followUps: PromiseWithRelations[] = [];
   const openCare: PromiseWithRelations[] = [];
+
+  const followUpIds = new Set(followUps.map((p) => p.id));
 
   for (const p of rows) {
     if (p.promise_type === "open_ended_care") {
       openCare.push(p);
       continue;
     }
-    if (p.next_follow_up_date && p.next_follow_up_date <= today) {
-      followUps.push(p);
-    }
+    // Don't double-list a promise that's already shown as a due check-in.
+    if (followUpIds.has(p.id)) continue;
     if (p.due_date && p.due_date < today) {
       overdue.push(p);
     } else if (p.due_date === today) {

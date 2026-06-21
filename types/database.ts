@@ -19,9 +19,11 @@ export type ActionResult = { error?: string };
 
 /** Input for creating a promise via the person-first flow. */
 export interface CreatePromiseInput {
-  // Person — exactly one of these is provided by the flow.
+  // Who/what the promise is for.
+  target: PromiseTarget; // 'person' | 'group' | 'self'
   personId?: string; // an existing person
   newPersonName?: string; // a brand-new person to create
+  groupId?: string; // an existing group
 
   // The promise itself
   title: string;
@@ -66,6 +68,24 @@ export type Category = {
   updated_at: string;
 }
 
+export type Group = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  status: EntityStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GroupMember = {
+  id: string;
+  user_id: string;
+  group_id: string;
+  person_id: string;
+  created_at: string;
+}
+
 export type Promise = {
   id: string;
   user_id: string;
@@ -95,6 +115,7 @@ export type Promise = {
 /** A promise row with its person and category joined in (dashboard shape). */
 export type PromiseWithRelations = Promise & {
   person: Pick<Person, "id" | "name"> | null;
+  group: { id: string; name: string } | null;
   category: Pick<Category, "id" | "name" | "color"> | null;
 }
 
