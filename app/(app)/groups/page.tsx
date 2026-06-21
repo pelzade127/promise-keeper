@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
-import { AddGroupForm, ArchiveGroupButton } from "@/components/groups-ui";
+import { AddGroupForm, ArchiveGroupButton, RestoreGroupButton } from "@/components/groups-ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function GroupsPage() {
+export default async function GroupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const { show } = await searchParams;
+  const archived = show === "archived";
   const supabase = await createClient();
 
   const {
@@ -18,7 +24,7 @@ export default async function GroupsPage() {
       supabase
         .from("groups")
         .select("id, name, description")
-        .eq("status", "active")
+        .eq("status", archived ? "archived" : "active")
         .order("name", { ascending: true }),
       supabase.from("group_members").select("group_id"),
       supabase.from("promises").select("group_id").eq("status", "active"),
@@ -41,19 +47,32 @@ export default async function GroupsPage() {
     <div className="container py-10 sm:py-14">
       <AppNav />
 
-      <header className="mb-8">
-        <h1 className="font-display text-4xl text-foreground">Your groups</h1>
-        <p className="mt-2 text-muted-foreground">
-          Families, small groups, teams — the circles you show up for.
-        </p>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl text-foreground">
+            {archived ? "Archived groups" : "Your groups"}
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            {archived
+              ? "Groups you've set aside. You can restore any of them."
+              : "Families, small groups, teams — the circles you show up for."}
+          </p>
+        </div>
+        <Link
+          href={archived ? "/groups" : "/groups?show=archived"}
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          {archived ? "← Back to active" : "View archived"}
+        </Link>
       </header>
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px]">
         <div className="space-y-2.5">
           {list.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border bg-card/60 p-8 text-center text-muted-foreground">
-              No groups yet. Create one to make promises to a whole circle of
-              people at once.
+              {archived
+                ? "No archived groups."
+                : "No groups yet. Create one to make promises to a whole circle of people at once."}
             </p>
           ) : (
             list.map((group) => {
@@ -79,13 +98,19 @@ export default async function GroupsPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={`/promises/new?group=${group.id}`}
-                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-                    >
-                      Make a promise
-                    </Link>
-                    <ArchiveGroupButton groupId={group.id} />
+                    {archived ? (
+                      <RestoreGroupButton groupId={group.id} />
+                    ) : (
+                      <>
+                        <Link
+                          href={`/promises/new?group=${group.id}`}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+                        >
+                          Make a promise
+                        </Link>
+                        <ArchiveGroupButton groupId={group.id} />
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -93,7 +118,7 @@ export default async function GroupsPage() {
           )}
         </div>
 
-        <AddGroupForm />
+        {!archived && <AddGroupForm />}
       </div>
     </div>
   );

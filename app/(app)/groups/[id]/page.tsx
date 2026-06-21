@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import { JournalComposer } from "@/components/journal-composer";
-import { MemberManager } from "@/components/groups-ui";
+import { MemberManager, EditableGroupHeader } from "@/components/groups-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -166,15 +166,16 @@ export default async function GroupPage({
       </Link>
 
       <header className="mt-4 mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl text-foreground">{group.name}</h1>
-          <p className="mt-1 text-muted-foreground">
-            {group.description ? `${group.description} · ` : ""}
-            {keptCount === 0
+        <EditableGroupHeader
+          groupId={group.id}
+          initialName={group.name}
+          initialDescription={group.description}
+          keptText={
+            keptCount === 0
               ? "Your story together is just beginning."
-              : `${keptCount} promise${keptCount === 1 ? "" : "s"} kept so far.`}
-          </p>
-        </div>
+              : `${keptCount} promise${keptCount === 1 ? "" : "s"} kept so far.`
+          }
+        />
         <Link
           href={`/promises/new?group=${group.id}`}
           className="rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:bg-primary/90"

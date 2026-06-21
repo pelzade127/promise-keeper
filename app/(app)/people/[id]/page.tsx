@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import { JournalComposer } from "@/components/journal-composer";
+import { EditablePersonHeader } from "@/components/people-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -136,15 +137,16 @@ export default async function PersonPage({
       </Link>
 
       <header className="mt-4 mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl text-foreground">{person.name}</h1>
-          <p className="mt-1 text-muted-foreground">
-            {person.relationship_note ? `${person.relationship_note} · ` : ""}
-            {keptCount === 0
+        <EditablePersonHeader
+          personId={person.id}
+          initialName={person.name}
+          initialNote={person.relationship_note}
+          keptText={
+            keptCount === 0
               ? "Your story together is just beginning."
-              : `${keptCount} promise${keptCount === 1 ? "" : "s"} kept so far.`}
-          </p>
-        </div>
+              : `${keptCount} promise${keptCount === 1 ? "" : "s"} kept so far.`
+          }
+        />
         <Link
           href={`/promises/new?person=${person.id}`}
           className="rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition hover:bg-primary/90"

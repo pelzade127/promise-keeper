@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
-import { AddPersonForm, ArchiveButton } from "@/components/people-ui";
+import { AddPersonForm, ArchiveButton, RestoreButton } from "@/components/people-ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function PeoplePage() {
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const { show } = await searchParams;
+  const archived = show === "archived";
   const supabase = await createClient();
 
   const {
@@ -17,15 +23,11 @@ export default async function PeoplePage() {
     supabase
       .from("people")
       .select("id, name, relationship_note")
-      .eq("status", "active")
+      .eq("status", archived ? "archived" : "active")
       .order("name", { ascending: true }),
-    supabase
-      .from("promises")
-      .select("person_id")
-      .eq("status", "active"),
+    supabase.from("promises").select("person_id").eq("status", "active"),
   ]);
 
-  // Count active promises per person.
   const counts = new Map<string, number>();
   for (const p of promises ?? []) {
     if (p.person_id) counts.set(p.person_id, (counts.get(p.person_id) ?? 0) + 1);
@@ -37,25 +39,43 @@ export default async function PeoplePage() {
     <div className="container py-10 sm:py-14">
       <AppNav />
 
-      <header className="mb-8">
-        <h1 className="font-display text-4xl text-foreground">Your people</h1>
-        <p className="mt-2 text-muted-foreground">
-          The folks you've committed to remember.
-        </p>
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-4xl text-foreground">
+            {archived ? "Archived people" : "Your people"}
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            {archived
+              ? "Folks you've set aside. You can restore anyone."
+              : "The folks you've committed to remember."}
+          </p>
+        </div>
+        <Link
+          href={archived ? "/people" : "/people?show=archived"}
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          {archived ? "← Back to active" : "View archived"}
+        </Link>
       </header>
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px]">
         <div className="space-y-2.5">
           {list.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border bg-card/60 p-8 text-center text-muted-foreground">
-              No one here yet. Add someone, or just{" "}
-              <Link
-                href="/promises/new"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                make a promise
-              </Link>{" "}
-              — they'll be added along the way.
+              {archived ? (
+                "No archived people."
+              ) : (
+                <>
+                  No one here yet. Add someone, or just{" "}
+                  <Link
+                    href="/promises/new"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    make a promise
+                  </Link>{" "}
+                  — they'll be added along the way.
+                </>
+              )}
             </p>
           ) : (
             list.map((person) => {
@@ -82,13 +102,19 @@ export default async function PeoplePage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Link
-                      href={`/promises/new?person=${person.id}`}
-                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-                    >
-                      Make a promise
-                    </Link>
-                    <ArchiveButton personId={person.id} />
+                    {archived ? (
+                      <RestoreButton personId={person.id} />
+                    ) : (
+                      <>
+                        <Link
+                          href={`/promises/new?person=${person.id}`}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+                        >
+                          Make a promise
+                        </Link>
+                        <ArchiveButton personId={person.id} />
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -96,7 +122,7 @@ export default async function PeoplePage() {
           )}
         </div>
 
-        <AddPersonForm />
+        {!archived && <AddPersonForm />}
       </div>
     </div>
   );

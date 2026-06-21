@@ -28,6 +28,51 @@ export async function createPerson(formData: FormData): Promise<ActionResult> {
   return {};
 }
 
+export async function updatePerson(input: {
+  personId: string;
+  name: string;
+  relationshipNote?: string;
+}): Promise<ActionResult> {
+  const name = input.name.trim();
+  if (!name) return { error: "Name can't be empty." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase
+    .from("people")
+    .update({
+      name,
+      relationship_note: input.relationshipNote?.trim() || null,
+    })
+    .eq("id", input.personId);
+  if (error) return { error: "Couldn't save those changes." };
+
+  revalidatePath(`/people/${input.personId}`);
+  revalidatePath("/people");
+  return {};
+}
+
+export async function restorePerson(personId: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase
+    .from("people")
+    .update({ status: "active" })
+    .eq("id", personId);
+  if (error) return { error: "Couldn't restore that person." };
+
+  revalidatePath("/people");
+  return {};
+}
+
 export async function archivePerson(personId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const {
