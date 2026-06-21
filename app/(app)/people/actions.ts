@@ -45,3 +45,31 @@ export async function archivePerson(personId: string): Promise<ActionResult> {
   revalidatePath("/people");
   return {};
 }
+
+/** Add a journal entry to a person's story (reflection, prayer, update, note, memory). */
+export async function addJournalEntry(input: {
+  personId: string;
+  entryType: string;
+  content: string;
+}): Promise<ActionResult> {
+  const content = input.content.trim();
+  if (!content) return { error: "Write something first." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase.from("journal_entries").insert({
+    user_id: user.id,
+    person_id: input.personId,
+    entry_type: input.entryType,
+    content,
+  });
+
+  if (error) return { error: "Couldn't save that entry. Please try again." };
+
+  revalidatePath(`/people/${input.personId}`);
+  return {};
+}

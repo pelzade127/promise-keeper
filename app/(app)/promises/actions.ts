@@ -251,6 +251,7 @@ export async function releasePromise(
 /** Record a follow-up check-in; reschedule it if the follow-up is recurring. */
 export async function completeFollowUp(
   promiseId: string,
+  note?: string,
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -283,6 +284,7 @@ export async function completeFollowUp(
     group_id: promise.group_id,
     event_type: "follow_up_completed",
     note: promise.title,
+    reflection: note?.trim() || null,
   });
 
   revalidatePath("/dashboard");

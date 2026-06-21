@@ -67,7 +67,7 @@ export default async function PeoplePage() {
                 >
                   <div>
                     <Link
-                      href={`/promises/new?person=${person.id}`}
+                      href={`/people/${person.id}`}
                       className="font-display text-lg text-foreground underline-offset-4 hover:text-primary hover:underline"
                     >
                       {person.name}
@@ -81,7 +81,15 @@ export default async function PeoplePage() {
                         : `${count} active promise${count === 1 ? "" : "s"}`}
                     </p>
                   </div>
-                  <ArchiveButton personId={person.id} />
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/promises/new?person=${person.id}`}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+                    >
+                      Make a promise
+                    </Link>
+                    <ArchiveButton personId={person.id} />
+                  </div>
                 </div>
               );
             })

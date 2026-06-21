@@ -11,7 +11,7 @@ import {
   completeFollowUp,
 } from "@/app/(app)/promises/actions";
 
-type Mode = null | "complete" | "recommit" | "release";
+type Mode = null | "complete" | "recommit" | "release" | "checkin";
 type Step = "confirm" | "reflect" | "followup" | "done";
 
 const RELEASE_REASONS: [string, string][] = [
@@ -117,13 +117,8 @@ export function PromiseCard({
           <div className="flex flex-wrap justify-end gap-1.5">
             {followUpDue && (
               <button
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  await completeFollowUp(promise.id);
-                  router.refresh();
-                }}
-                className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground transition hover:bg-accent/90 disabled:opacity-50"
+                onClick={() => setMode("checkin")}
+                className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground transition hover:bg-accent/90"
               >
                 I checked in
               </button>
@@ -184,6 +179,19 @@ export function PromiseCard({
               onRelease={async (reason) => {
                 setBusy(true);
                 await releasePromise(promise.id, reason);
+                router.refresh();
+                close();
+              }}
+            />
+          )}
+          {mode === "checkin" && (
+            <CheckInFlow
+              promise={promise}
+              who={who}
+              isSelf={isSelf}
+              busy={busy}
+              setBusy={setBusy}
+              onDone={() => {
                 router.refresh();
                 close();
               }}
@@ -438,6 +446,80 @@ function ReleaseFlow({
         className="mt-5 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
       >
         {busy ? "Releasing…" : `Release this promise`}
+      </button>
+    </div>
+  );
+}
+
+function CheckInFlow({
+  promise,
+  who,
+  isSelf,
+  busy,
+  setBusy,
+  onDone,
+}: {
+  promise: PromiseWithRelations;
+  who: string;
+  isSelf: boolean;
+  busy: boolean;
+  setBusy: (b: boolean) => void;
+  onDone: () => void;
+}) {
+  const [step, setStep] = useState<"note" | "done">("note");
+  const [note, setNote] = useState("");
+  const [message] = useState(() => {
+    const list = isSelf
+      ? ["You came back around. That's faithfulness."]
+      : [
+          `${who} got to feel remembered again today.`,
+          `Showing up twice for ${who} — that's the whole point.`,
+          "Following through, again. This is the habit forming.",
+        ];
+    return list[Math.floor(Math.random() * list.length)];
+  });
+
+  if (step === "note") {
+    return (
+      <div>
+        <h2 className="font-display text-2xl text-foreground">
+          Checking in with {who}.
+        </h2>
+        <p className="mt-2 text-muted-foreground">How did it go? (optional)</p>
+        <textarea
+          autoFocus
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={3}
+          placeholder="A line to remember this moment by."
+          className="mt-3 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
+        />
+        <button
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await completeFollowUp(promise.id, note || undefined);
+            setStep("done");
+            setBusy(false);
+          }}
+          className="mt-3 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+        >
+          {busy ? "Saving…" : "Mark checked in"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-center">
+      <p className="font-display text-2xl leading-snug text-foreground">
+        {message}
+      </p>
+      <button
+        onClick={onDone}
+        className="mt-6 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90"
+      >
+        Close
       </button>
     </div>
   );
