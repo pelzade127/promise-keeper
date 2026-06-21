@@ -66,9 +66,12 @@ export default async function PeoplePage() {
                   className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
                 >
                   <div>
-                    <p className="font-display text-lg text-foreground">
+                    <Link
+                      href={`/promises/new?person=${person.id}`}
+                      className="font-display text-lg text-foreground underline-offset-4 hover:text-primary hover:underline"
+                    >
                       {person.name}
-                    </p>
+                    </Link>
                     <p className="text-sm text-muted-foreground">
                       {person.relationship_note
                         ? `${person.relationship_note} · `

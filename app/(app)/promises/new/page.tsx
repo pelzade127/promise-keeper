@@ -3,13 +3,19 @@ import { PromiseFlow } from "@/components/promise-flow";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewPromisePage() {
+export default async function NewPromisePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ person?: string }>;
+}) {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
+
+  const { person: personId } = await searchParams;
 
   const [{ data: people }, { data: categories }] = await Promise.all([
     supabase
@@ -23,9 +29,18 @@ export default async function NewPromisePage() {
       .order("name", { ascending: true }),
   ]);
 
+  const preselected =
+    personId && people
+      ? (people.find((p) => p.id === personId) ?? null)
+      : null;
+
   return (
     <div className="container py-10 sm:py-14">
-      <PromiseFlow people={people ?? []} categories={categories ?? []} />
+      <PromiseFlow
+        people={people ?? []}
+        categories={categories ?? []}
+        preselectedPerson={preselected}
+      />
     </div>
   );
 }

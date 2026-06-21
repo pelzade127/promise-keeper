@@ -22,14 +22,18 @@ const label = "block text-sm font-medium text-foreground mb-1.5";
 export function PromiseFlow({
   people,
   categories,
+  preselectedPerson = null,
 }: {
   people: Person[];
   categories: Category[];
+  preselectedPerson?: Person | null;
 }) {
   const router = useRouter();
 
-  const [step, setStep] = useState<Step>("ask");
-  const [chosenPerson, setChosenPerson] = useState<Person | null>(null);
+  const [step, setStep] = useState<Step>(preselectedPerson ? "details" : "ask");
+  const [chosenPerson, setChosenPerson] = useState<Person | null>(
+    preselectedPerson,
+  );
   const [newPersonName, setNewPersonName] = useState("");
   const [query, setQuery] = useState("");
 
