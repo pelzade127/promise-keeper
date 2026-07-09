@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult, CreatePromiseInput } from "@/types/database";
+import type {
+  ActionResult,
+  CreatePromiseInput,
+  PromiseType,
+  PromiseRecurrence,
+  FollowUpType,
+} from "@/types/database";
 
 /** Add `days` to a YYYY-MM-DD string (or to today) and return YYYY-MM-DD. */
 function addDays(base: string | undefined, days: number): string {
@@ -315,6 +321,59 @@ export async function dismissFollowUp(
     .update({ next_follow_up_date: null })
     .eq("id", promiseId);
   if (error) return { error: "Couldn't update that." };
+
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/** Edit an existing promise's details (not its target). */
+export async function updatePromise(input: {
+  promiseId: string;
+  title: string;
+  categoryId?: string;
+  whyItMatters?: string;
+  promiseType: PromiseType;
+  recurrence?: PromiseRecurrence;
+  dueDate?: string;
+  reminderEnabled: boolean;
+  followUpType: FollowUpType;
+  followUpIntervalDays?: number;
+}): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  if (!input.title.trim()) return { error: "Give the promise a title." };
+
+  const isOpenEnded = input.promiseType === "open_ended_care";
+  const followUpDate =
+    input.followUpType !== "none" && input.followUpIntervalDays
+      ? addDays(input.dueDate, input.followUpIntervalDays)
+      : null;
+
+  const { error } = await supabase
+    .from("promises")
+    .update({
+      title: input.title.trim(),
+      why_it_matters: input.whyItMatters?.trim() || null,
+      category_id: input.categoryId || null,
+      promise_type: input.promiseType,
+      recurrence:
+        input.promiseType === "recurring"
+          ? (input.recurrence ?? "weekly")
+          : "none",
+      due_date: isOpenEnded ? null : input.dueDate || null,
+      next_due_date: isOpenEnded ? null : input.dueDate || null,
+      reminder_enabled: input.reminderEnabled,
+      follow_up_type: input.followUpType,
+      follow_up_interval_days: input.followUpIntervalDays || null,
+      next_follow_up_date: followUpDate,
+    })
+    .eq("id", input.promiseId);
+
+  if (error) return { error: "Couldn't save those changes." };
 
   revalidatePath("/dashboard");
   return {};

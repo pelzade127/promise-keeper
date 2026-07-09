@@ -3,6 +3,7 @@ import type { PromiseWithRelations } from "@/types/database";
 
 export interface DashboardData {
   displayName: string;
+  faithMode: boolean;
   overdue: PromiseWithRelations[];
   dueToday: PromiseWithRelations[];
   followUps: PromiseWithRelations[];
@@ -25,6 +26,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   if (!user) return null;
 
   const today = todayISO();
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("display_name, faith_mode")
+    .eq("id", user.id)
+    .single();
 
   // Active promises drive the overdue / today / open-care sections.
   const { data: promises } = await supabase
@@ -78,9 +85,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   return {
     displayName:
+      (profile?.display_name as string | undefined) ??
       (user.user_metadata?.display_name as string | undefined) ??
       user.email?.split("@")[0] ??
       "friend",
+    faithMode: Boolean(profile?.faith_mode),
     overdue,
     dueToday,
     followUps,

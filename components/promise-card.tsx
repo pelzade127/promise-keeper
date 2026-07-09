@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { faithEncouragements } from "@/lib/faith";
 import type { PromiseWithRelations } from "@/types/database";
 import {
   completePromise,
@@ -61,10 +63,12 @@ export function PromiseCard({
   promise,
   today,
   context = "default",
+  faithMode = false,
 }: {
   promise: PromiseWithRelations;
   today: string;
   context?: "default" | "followup";
+  faithMode?: boolean;
 }) {
   const router = useRouter();
   const isSelf = promise.target_type === "self";
@@ -144,6 +148,12 @@ export function PromiseCard({
                 >
                   Recommit
                 </button>
+                <Link
+                  href={`/promises/${promise.id}/edit`}
+                  className="rounded-md px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  Edit
+                </Link>
               </>
             )}
             {context === "followup" ? (
@@ -177,6 +187,7 @@ export function PromiseCard({
               promise={promise}
               who={who}
               isSelf={isSelf}
+              faithMode={faithMode}
               busy={busy}
               setBusy={setBusy}
               onDone={() => {
@@ -214,6 +225,7 @@ export function PromiseCard({
               promise={promise}
               who={who}
               isSelf={isSelf}
+              faithMode={faithMode}
               busy={busy}
               setBusy={setBusy}
               onDone={() => {
@@ -254,6 +266,7 @@ function CompleteFlow({
   promise,
   who,
   isSelf,
+  faithMode,
   busy,
   setBusy,
   onDone,
@@ -261,6 +274,7 @@ function CompleteFlow({
   promise: PromiseWithRelations;
   who: string;
   isSelf: boolean;
+  faithMode: boolean;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onDone: () => void;
@@ -269,7 +283,9 @@ function CompleteFlow({
   const [step, setStep] = useState<Step>("confirm");
   const [reflection, setReflection] = useState("");
   const [message] = useState(() => {
-    const list = encouragements(who, isSelf);
+    const list = faithMode
+      ? faithEncouragements(who, isSelf)
+      : encouragements(who, isSelf);
     return list[Math.floor(Math.random() * list.length)];
   });
 
@@ -480,6 +496,7 @@ function CheckInFlow({
   promise,
   who,
   isSelf,
+  faithMode,
   busy,
   setBusy,
   onDone,
@@ -487,6 +504,7 @@ function CheckInFlow({
   promise: PromiseWithRelations;
   who: string;
   isSelf: boolean;
+  faithMode: boolean;
   busy: boolean;
   setBusy: (b: boolean) => void;
   onDone: () => void;
@@ -494,6 +512,10 @@ function CheckInFlow({
   const [step, setStep] = useState<"note" | "done">("note");
   const [note, setNote] = useState("");
   const [message] = useState(() => {
+    if (faithMode) {
+      const list = faithEncouragements(who, isSelf);
+      return list[Math.floor(Math.random() * list.length)];
+    }
     const list = isSelf
       ? ["You came back around. That's faithfulness."]
       : [

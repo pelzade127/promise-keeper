@@ -193,12 +193,13 @@ export default async function GroupPage({
               </h2>
               <div className="space-y-2">
                 {active.map((p) => (
-                  <div
+                  <Link
                     key={p.id}
-                    className="rounded-lg border border-border bg-card px-4 py-3"
+                    href={`/promises/${p.id}/edit?from=/groups/${group.id}`}
+                    className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
                   >
-                    <p className="text-foreground">{p.title}</p>
-                  </div>
+                    <span className="text-foreground">{p.title}</span>
+                  </Link>
                 ))}
               </div>
             </section>

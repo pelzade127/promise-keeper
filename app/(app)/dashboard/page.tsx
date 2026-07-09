@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDashboardData } from "@/lib/dashboard";
+import { verseOfToday } from "@/lib/faith";
 import { PromiseCard } from "@/components/promise-card";
 import { AppNav } from "@/components/app-nav";
 import type { PromiseWithRelations } from "@/types/database";
@@ -15,11 +16,13 @@ function Section({
   promises,
   today,
   context = "default",
+  faithMode = false,
 }: {
   title: string;
   promises: PromiseWithRelations[];
   today: string;
   context?: "default" | "followup";
+  faithMode?: boolean;
 }) {
   if (promises.length === 0) return null;
   return (
@@ -29,7 +32,13 @@ function Section({
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         {promises.map((p) => (
-          <PromiseCard key={p.id} promise={p} today={today} context={context} />
+          <PromiseCard
+            key={p.id}
+            promise={p}
+            today={today}
+            context={context}
+            faithMode={faithMode}
+          />
         ))}
       </div>
     </section>
@@ -51,6 +60,21 @@ export default async function DashboardPage() {
   return (
     <div className="container py-10 sm:py-14">
       <AppNav />
+
+      {data.faithMode &&
+        (() => {
+          const verse = verseOfToday();
+          return (
+            <div className="mb-8 rounded-lg border border-accent/30 bg-accent/10 px-5 py-4">
+              <p className="font-display text-lg text-foreground">
+                “{verse.text}”
+              </p>
+              <p className="mt-1 text-sm text-accent-foreground/80">
+                — {verse.ref}
+              </p>
+            </div>
+          );
+        })()}
 
       <header className="mb-10 max-w-2xl">
         {/* The signature: names treated as the content, set in the display face. */}
@@ -84,18 +108,30 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
-          <Section title="Overdue" promises={data.overdue} today={today} />
-          <Section title="Due today" promises={data.dueToday} today={today} />
+          <Section
+            title="Overdue"
+            promises={data.overdue}
+            today={today}
+            faithMode={data.faithMode}
+          />
+          <Section
+            title="Due today"
+            promises={data.dueToday}
+            today={today}
+            faithMode={data.faithMode}
+          />
           <Section
             title="Time to follow up"
             promises={data.followUps}
             today={today}
             context="followup"
+            faithMode={data.faithMode}
           />
           <Section
             title="Ongoing care"
             promises={data.openCare}
             today={today}
+            faithMode={data.faithMode}
           />
         </>
       )}
