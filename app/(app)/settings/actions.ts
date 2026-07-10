@@ -13,8 +13,7 @@ export async function setFaithMode(enabled: boolean): Promise<ActionResult> {
 
   const { error } = await supabase
     .from("user_profiles")
-    .update({ faith_mode: enabled })
-    .eq("id", user.id);
+    .upsert({ id: user.id, faith_mode: enabled }, { onConflict: "id" });
   if (error) return { error: "Couldn't update your settings." };
 
   revalidatePath("/settings");

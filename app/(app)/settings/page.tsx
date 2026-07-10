@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     .from("user_profiles")
     .select("faith_mode")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   return (
     <div className="container py-10 sm:py-14">

@@ -31,7 +31,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     .from("user_profiles")
     .select("display_name, faith_mode")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   // Active promises drive the overdue / today / open-care sections.
   const { data: promises } = await supabase
