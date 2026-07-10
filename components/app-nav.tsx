@@ -48,6 +48,18 @@ export async function AppNav() {
           </Link>
         )}
         <Link
+          href="/journey"
+          className="text-muted-foreground transition hover:text-foreground"
+        >
+          Journey
+        </Link>
+        <Link
+          href="/partners"
+          className="text-muted-foreground transition hover:text-foreground"
+        >
+          Partners
+        </Link>
+        <Link
           href="/settings"
           className="text-muted-foreground transition hover:text-foreground"
         >
