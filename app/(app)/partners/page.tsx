@@ -130,7 +130,15 @@ export default async function PartnersPage() {
                           p.visibility}
                       </p>
                     </div>
-                    <RevokeButton id={p.id as string} />
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/partners/manage/${p.id}`}
+                        className="text-sm font-medium text-primary underline-offset-4 transition hover:underline"
+                      >
+                        Choose promises
+                      </Link>
+                      <RevokeButton id={p.id as string} />
+                    </div>
                   </div>
                 ))}
               </div>

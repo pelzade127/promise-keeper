@@ -14,9 +14,9 @@ const field =
 export function InvitePartnerForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [visibility, setVisibility] = useState<"everything" | "overdue_only">(
-    "overdue_only",
-  );
+  const [visibility, setVisibility] = useState<
+    "everything" | "overdue_only" | "selected_promises"
+  >("overdue_only");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -57,6 +57,11 @@ export function InvitePartnerForm() {
               [
                 ["overdue_only", "Only overdue promises", "A gentle nudge list."],
                 ["everything", "All my active promises", "Full visibility."],
+                [
+                  "selected_promises",
+                  "Only promises I choose",
+                  "Pick them after inviting.",
+                ],
               ] as const
             ).map(([value, label, desc]) => (
               <button
