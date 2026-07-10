@@ -1,6 +1,7 @@
 // Faith Mode content. Scripture quotations are from the King James Version,
 // which is in the public domain. Kept short and always cited. The reflections
-// are original devotional writing.
+// are original devotional writing. Pronouns referring to God are reverentially
+// capitalized (He/Him/His and, in prayers, You/Your/Yours).
 
 export type Verse = {
   text: string;
@@ -58,10 +59,10 @@ export const VERSES: Verse[] = [
     application:
       "The people on your list aren't tasks. Let real affection shape how you remember them today.",
     prayer:
-      "God, grow in me a genuine tenderness for the people you've placed in my life.",
+      "God, grow in me a genuine tenderness for the people You've placed in my life.",
   },
   {
-    text: "Faithful is he that calleth you.",
+    text: "Faithful is He that calleth you.",
     ref: "1 Thessalonians 5:24",
     context:
       "Paul reassures a young church that God will finish the good work begun in them.",
@@ -70,7 +71,7 @@ export const VERSES: Verse[] = [
     application:
       "When you fall short on a promise, remember you're not the source of faithfulness — you're learning it from the One who is faithful.",
     prayer:
-      "Faithful God, thank you that your steadiness holds me even when mine fails. Teach me to keep my word as you keep yours.",
+      "Faithful God, thank You that Your steadiness holds me even when mine fails. Teach me to keep my word as You keep Yours.",
   },
   {
     text: "A friend loveth at all times.",
@@ -97,7 +98,7 @@ export const VERSES: Verse[] = [
       "God, help me give my full heart to the good I can do today, not a half-hearted version of it.",
   },
   {
-    text: "We love him, because he first loved us.",
+    text: "We love Him, because He first loved us.",
     ref: "1 John 4:19",
     context: "John writes to churches about the source and nature of love.",
     meaning:
@@ -105,7 +106,7 @@ export const VERSES: Verse[] = [
     application:
       "You can love the people on your list generously because you're drawing from a love you didn't have to earn.",
     prayer:
-      "Lord, let me love others out of the overflow of how you have loved me.",
+      "Lord, let me love others out of the overflow of how You have loved me.",
   },
 ];
 
