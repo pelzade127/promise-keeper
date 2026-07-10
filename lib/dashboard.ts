@@ -4,6 +4,7 @@ import type { PromiseWithRelations } from "@/types/database";
 export interface DashboardData {
   displayName: string;
   faithMode: boolean;
+  needsWeeklyReflection: boolean;
   overdue: PromiseWithRelations[];
   dueToday: PromiseWithRelations[];
   followUps: PromiseWithRelations[];
@@ -32,6 +33,15 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     .select("display_name, faith_mode")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Has the user reflected in the last 7 days?
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const { data: recentReflections } = await supabase
+    .from("reflections")
+    .select("id")
+    .gte("created_at", weekAgo)
+    .limit(1);
+  const needsWeeklyReflection = (recentReflections ?? []).length === 0;
 
   // Active promises drive the overdue / today / open-care sections.
   const { data: promises } = await supabase
@@ -90,6 +100,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       user.email?.split("@")[0] ??
       "friend",
     faithMode: Boolean(profile?.faith_mode),
+    needsWeeklyReflection,
     overdue,
     dueToday,
     followUps,

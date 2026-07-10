@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getDashboardData } from "@/lib/dashboard";
 import { verseOfToday } from "@/lib/faith";
 import { PromiseCard } from "@/components/promise-card";
+import { VerseCard } from "@/components/verse-card";
+import { WeeklyReflection } from "@/components/weekly-reflection";
 import { AppNav } from "@/components/app-nav";
 import type { PromiseWithRelations } from "@/types/database";
 
@@ -61,20 +63,9 @@ export default async function DashboardPage() {
     <div className="container py-10 sm:py-14">
       <AppNav />
 
-      {data.faithMode &&
-        (() => {
-          const verse = verseOfToday();
-          return (
-            <div className="mb-8 rounded-lg border border-accent/30 bg-accent/10 px-5 py-4">
-              <p className="font-display text-lg text-foreground">
-                “{verse.text}”
-              </p>
-              <p className="mt-1 text-sm text-accent-foreground/80">
-                — {verse.ref}
-              </p>
-            </div>
-          );
-        })()}
+      {data.faithMode && <VerseCard verse={verseOfToday()} />}
+
+      {data.faithMode && data.needsWeeklyReflection && <WeeklyReflection />}
 
       <header className="mb-10 max-w-2xl">
         {/* The signature: names treated as the content, set in the display face. */}

@@ -378,3 +378,48 @@ export async function updatePromise(input: {
   revalidatePath("/dashboard");
   return {};
 }
+
+/** Mark a Prayer promise answered — a small celebration, with an optional testimony. */
+export async function markPrayerAnswered(input: {
+  promiseId: string;
+  note?: string;
+}): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { data: promise } = await supabase
+    .from("promises")
+    .select("id, title, person_id, group_id")
+    .eq("id", input.promiseId)
+    .single();
+  if (!promise) return { error: "Couldn't find that promise." };
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("promises")
+    .update({
+      status: "completed",
+      completed_at: now,
+      answered_at: now,
+      answer_note: input.note?.trim() || null,
+    })
+    .eq("id", input.promiseId);
+  if (error) return { error: "Couldn't record that. Please try again." };
+
+  await supabase.from("promise_events").insert({
+    user_id: user.id,
+    promise_id: promise.id,
+    person_id: promise.person_id,
+    group_id: promise.group_id,
+    event_type: "completed",
+    note: promise.title,
+    reflection: input.note?.trim() || null,
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/prayer");
+  return {};
+}

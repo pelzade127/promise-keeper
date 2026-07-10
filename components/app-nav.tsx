@@ -1,7 +1,23 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 
-export function AppNav() {
+export async function AppNav() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let faithMode = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("faith_mode")
+      .eq("id", user.id)
+      .maybeSingle();
+    faithMode = Boolean(profile?.faith_mode);
+  }
+
   return (
     <nav className="mb-10 flex items-center justify-between gap-4">
       <Link
@@ -23,6 +39,14 @@ export function AppNav() {
         >
           Groups
         </Link>
+        {faithMode && (
+          <Link
+            href="/prayer"
+            className="text-muted-foreground transition hover:text-foreground"
+          >
+            Prayer
+          </Link>
+        )}
         <Link
           href="/settings"
           className="text-muted-foreground transition hover:text-foreground"

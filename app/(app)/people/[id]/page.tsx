@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import { JournalComposer } from "@/components/journal-composer";
 import { EditablePersonHeader } from "@/components/people-ui";
+import { VerseAttach } from "@/components/verse-attach";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,13 @@ export default async function PersonPage({
     .single();
 
   if (!person) notFound();
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("faith_mode")
+    .eq("id", user.id)
+    .maybeSingle();
+  const faithMode = Boolean(profile?.faith_mode);
 
   const [{ data: promises }, { data: journal }, { data: events }] =
     await Promise.all([
@@ -212,11 +220,16 @@ export default async function PersonPage({
           </section>
         </div>
 
-        <div>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Add to the journal
-          </h2>
-          <JournalComposer personId={person.id} name={person.name} />
+        <div className="space-y-5">
+          {faithMode && (
+            <VerseAttach personId={person.id} name={person.name} />
+          )}
+          <div>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Add to the journal
+            </h2>
+            <JournalComposer personId={person.id} name={person.name} />
+          </div>
         </div>
       </div>
     </div>

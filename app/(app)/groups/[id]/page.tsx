@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import { JournalComposer } from "@/components/journal-composer";
 import { MemberManager, EditableGroupHeader } from "@/components/groups-ui";
+import { VerseAttach } from "@/components/verse-attach";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,13 @@ export default async function GroupPage({
     .single();
 
   if (!group) notFound();
+
+  const { data: gProfile } = await supabase
+    .from("user_profiles")
+    .select("faith_mode")
+    .eq("id", user.id)
+    .maybeSingle();
+  const faithMode = Boolean(gProfile?.faith_mode);
 
   const [
     { data: memberRows },
@@ -247,6 +255,7 @@ export default async function GroupPage({
             members={members}
             candidates={candidates}
           />
+          {faithMode && <VerseAttach groupId={group.id} name={group.name} />}
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Add to the journal

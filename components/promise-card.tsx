@@ -12,6 +12,7 @@ import {
   releasePromise,
   completeFollowUp,
   dismissFollowUp,
+  markPrayerAnswered,
 } from "@/app/(app)/promises/actions";
 
 type Mode = null | "complete" | "recommit" | "release" | "checkin";
@@ -289,10 +290,13 @@ function CompleteFlow({
     return list[Math.floor(Math.random() * list.length)];
   });
 
+  const isPrayer = promise.category?.name === "Prayer";
   const reflectPrompt =
-    promise.category?.name === "Prayer"
-      ? "What did you pray about?"
-      : "Anything you'd like to remember about this?";
+    faithMode && isPrayer
+      ? "How did God show up?"
+      : isPrayer
+        ? "What did you pray about?"
+        : "Anything you'd like to remember about this?";
 
   async function finish(scheduleFollowUp: boolean) {
     setBusy(true);
@@ -300,6 +304,16 @@ function CompleteFlow({
       promiseId: promise.id,
       reflection: reflection || undefined,
       scheduleFollowUp,
+    });
+    setStep("done");
+    setBusy(false);
+  }
+
+  async function answerPrayer() {
+    setBusy(true);
+    await markPrayerAnswered({
+      promiseId: promise.id,
+      note: reflection || undefined,
     });
     setStep("done");
     setBusy(false);
@@ -341,6 +355,15 @@ function CompleteFlow({
         >
           {busy ? "Saving…" : "Continue"}
         </button>
+        {faithMode && isPrayer && (
+          <button
+            disabled={busy}
+            onClick={answerPrayer}
+            className="mt-2 w-full rounded-lg border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:bg-accent/20 disabled:opacity-60"
+          >
+            This prayer was answered
+          </button>
+        )}
       </div>
     );
   }
