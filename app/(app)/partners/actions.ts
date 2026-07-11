@@ -1,26 +1,43 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/notify";
 import type { ActionResult } from "@/types/database";
+
+async function baseUrl(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const proto = host.startsWith("localhost") ? "http" : "https";
+  return `${proto}://${host}`;
+}
 
 export async function invitePartner(input: {
   email: string;
   visibility: "everything" | "overdue_only" | "selected_promises";
 }): Promise<ActionResult> {
-  const email = input.email.trim().toLowerCase();
-  if (!email || !email.includes("@")) {
-    return { error: "Enter a valid email." };
-  }
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in." };
 
+  const email = input.email.trim().toLowerCase();
+  if (!email || !email.includes("@")) return { error: "Enter a valid email." };
   if (email === user.email?.toLowerCase()) {
     return { error: "You can't invite yourself." };
+  }
+
+  // One invitation per owner per email.
+  const { data: existing } = await supabase
+    .from("accountability_partners")
+    .select("id")
+    .eq("owner_id", user.id)
+    .ilike("partner_email", email);
+  if ((existing ?? []).length > 0) {
+    return { error: "You've already invited that email." };
   }
 
   const { error } = await supabase.from("accountability_partners").insert({
@@ -30,6 +47,29 @@ export async function invitePartner(input: {
     status: "pending",
   });
   if (error) return { error: "Couldn't send that invitation." };
+
+  // Best-effort email (no-ops if Resend isn't configured).
+  const { data: me } = await supabase
+    .from("user_profiles")
+    .select("display_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const inviter =
+    (me?.display_name as string | undefined) ??
+    user.email?.split("@")[0] ??
+    "Someone";
+
+  const { data: hasAccount } = await supabase.rpc("partner_account_exists", {
+    p_email: email,
+    p_phone: null,
+  });
+
+  const site = await baseUrl();
+  const body = hasAccount
+    ? `${inviter} invited you to be their accountability partner on Promise Keeper. Open the app and go to Partners to accept.`
+    : `${inviter} invited you to be their accountability partner on Promise Keeper. Create an account to accept: ${site}/login`;
+
+  await sendEmail(email, `${inviter} invited you on Promise Keeper`, body);
 
   revalidatePath("/partners");
   return {};

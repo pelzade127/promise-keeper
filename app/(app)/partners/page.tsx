@@ -123,7 +123,9 @@ export default async function PartnersPage() {
                     className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
                   >
                     <div>
-                      <p className="text-foreground">{p.partner_email as string}</p>
+                      <p className="text-foreground">
+                        {(p.partner_email as string | null) ?? "Invited"}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         {STATUS_LABEL[p.status as string] ?? p.status} ·{" "}
                         {VISIBILITY_LABEL[p.visibility as string] ??

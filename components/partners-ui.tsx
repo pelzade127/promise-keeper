@@ -87,6 +87,11 @@ export function InvitePartnerForm() {
         >
           {saving ? "Sending…" : "Send invitation"}
         </button>
+        <p className="text-xs text-muted-foreground">
+          They'll see this invitation next time they sign in with that email.
+          Let them know to expect it — this app doesn't send automatic emails
+          yet.
+        </p>
       </div>
     </div>
   );

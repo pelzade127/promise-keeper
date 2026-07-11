@@ -33,6 +33,9 @@ export default async function ManagePartnerPage({
     .maybeSingle();
   if (!partner) notFound();
 
+  const partnerLabel =
+    (partner.partner_email as string | null) ?? "your partner";
+
   const [{ data: promises }, { data: shares }] = await Promise.all([
     supabase
       .from("promises")
@@ -82,7 +85,7 @@ export default async function ManagePartnerPage({
 
       <header className="mt-4 mb-8">
         <h1 className="font-display text-4xl text-foreground">
-          Sharing with {partner.partner_email as string}
+          Sharing with {partnerLabel}
         </h1>
         <p className="mt-2 text-muted-foreground">
           Choose exactly what this partner can see. Changes save as you go.
