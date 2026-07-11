@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import {
   signIn,
   signUp,
@@ -35,13 +36,14 @@ function SubmitButton({ label }: { label: string }) {
  * sign-in screen can never carry over a stale sign-up error, and the submit
  * always fires the action that matches the visible mode.
  */
-function AuthForm({ mode }: { mode: Mode }) {
+function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   const action =
     mode === "signin" ? signIn : mode === "signup" ? signUp : requestPasswordReset;
   const [state, formAction] = useActionState(action, initial);
 
   return (
     <form action={formAction} className="space-y-3">
+      <input type="hidden" name="next" value={next} />
       {mode === "signup" && (
         <input
           name="display_name"
@@ -96,8 +98,12 @@ function AuthForm({ mode }: { mode: Mode }) {
   );
 }
 
-export default function LoginPage() {
+import { Suspense } from "react";
+
+function LoginPageInner() {
   const [mode, setMode] = useState<Mode>("signin");
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "";
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
@@ -119,7 +125,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <AuthForm mode={mode} key={mode} />
+        <AuthForm mode={mode} next={next} key={mode} />
 
         <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
           {mode === "signin" && (
@@ -152,5 +158,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

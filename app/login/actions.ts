@@ -19,8 +19,9 @@ export async function signIn(
 
   if (error) return { error: "That email and password didn't match. Try again." };
 
+  const next = String(formData.get("next") ?? "").trim();
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(next.startsWith("/") ? next : "/dashboard");
 }
 
 export async function signUp(
@@ -41,9 +42,10 @@ export async function signUp(
   if (error) return { error: error.message };
 
   // Email confirmation is off, so the user is signed in immediately —
-  // send them straight to the dashboard.
+  // send them straight to the dashboard (or wherever they were headed).
+  const next = String(formData.get("next") ?? "").trim();
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(next.startsWith("/") ? next : "/dashboard");
 }
 
 export async function signOut() {

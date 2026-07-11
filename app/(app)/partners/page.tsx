@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import {
   InvitePartnerForm,
+  InviteLinkGenerator,
   RevokeButton,
   RespondButtons,
 } from "@/components/partners-ui";
@@ -14,6 +15,7 @@ const VISIBILITY_LABEL: Record<string, string> = {
   overdue_only: "Overdue only",
   weekly_digest: "Weekly digest",
   selected_categories: "Selected categories",
+  selected_promises: "Only chosen promises",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -35,10 +37,12 @@ export default async function PartnersPage() {
   await supabase.rpc("claim_partner_invites");
 
   const [{ data: mine }, { data: supporting }] = await Promise.all([
-    // Partners I've invited to watch my promises.
+    // Partners I've invited to watch my promises (includes unclaimed links).
     supabase
       .from("accountability_partners")
-      .select("id, partner_email, visibility, status, partner_id")
+      .select(
+        "id, partner_email, invite_token, visibility, status, partner_id",
+      )
       .eq("owner_id", user.id)
       .order("invited_at", { ascending: false }),
     // Invitations where I'm the partner.
@@ -54,16 +58,22 @@ export default async function PartnersPage() {
   const pendingForMe = supportingRows.filter((r) => r.status === "pending");
   const acceptedForMe = supportingRows.filter((r) => r.status === "accepted");
 
-  // Resolve owner display names for the "you're supporting" side.
-  const ownerIds = Array.from(
-    new Set(supportingRows.map((r) => r.owner_id as string)),
+  // Names for people I've invited (once they've claimed a link) and for the
+  // owners of invitations addressed to me — both readable now via RLS.
+  const otherIds = Array.from(
+    new Set([
+      ...supportingRows.map((r) => r.owner_id as string),
+      ...myPartners
+        .map((p) => p.partner_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ]),
   );
   const nameById = new Map<string, string>();
-  if (ownerIds.length) {
+  if (otherIds.length) {
     const { data: profiles } = await supabase
       .from("user_profiles")
       .select("id, display_name")
-      .in("id", ownerIds);
+      .in("id", otherIds);
     for (const p of profiles ?? [])
       nameById.set(p.id as string, (p.display_name as string) ?? "Someone");
   }
@@ -87,20 +97,21 @@ export default async function PartnersPage() {
             Invitations for you
           </h2>
           <div className="space-y-2">
-            {pendingForMe.map((r) => (
-              <div
-                key={r.id as string}
-                className="flex items-center justify-between rounded-lg border border-primary/30 bg-secondary px-5 py-4"
-              >
-                <p className="text-foreground">
-                  <span className="font-medium">
-                    {nameById.get(r.owner_id as string) ?? "Someone"}
-                  </span>{" "}
-                  invited you to help keep them accountable.
-                </p>
-                <RespondButtons id={r.id as string} />
-              </div>
-            ))}
+            {pendingForMe.map((r) => {
+              const ownerName = nameById.get(r.owner_id as string) ?? "Someone";
+              return (
+                <div
+                  key={r.id as string}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-secondary px-5 py-4"
+                >
+                  <p className="text-foreground">
+                    <span className="font-medium">{ownerName}</span> invited
+                    you to help keep them accountable.
+                  </p>
+                  <RespondButtons id={r.id as string} ownerName={ownerName} />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -117,32 +128,42 @@ export default async function PartnersPage() {
               </p>
             ) : (
               <div className="space-y-2">
-                {myPartners.map((p) => (
-                  <div
-                    key={p.id as string}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
-                  >
-                    <div>
-                      <p className="text-foreground">
-                        {(p.partner_email as string | null) ?? "Invited"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {STATUS_LABEL[p.status as string] ?? p.status} ·{" "}
-                        {VISIBILITY_LABEL[p.visibility as string] ??
-                          p.visibility}
-                      </p>
+                {myPartners.map((p) => {
+                  const isUnclaimedLink =
+                    !p.partner_email && !p.partner_id && p.invite_token;
+                  const label = p.partner_id
+                    ? (nameById.get(p.partner_id as string) ??
+                      (p.partner_email as string | null) ??
+                      "Someone")
+                    : ((p.partner_email as string | null) ??
+                      (isUnclaimedLink ? "Invite link (not yet used)" : "Invited"));
+                  return (
+                    <div
+                      key={p.id as string}
+                      className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4"
+                    >
+                      <div>
+                        <p className="text-foreground">{label}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {STATUS_LABEL[p.status as string] ?? p.status} ·{" "}
+                          {VISIBILITY_LABEL[p.visibility as string] ??
+                            p.visibility}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {!isUnclaimedLink && (
+                          <Link
+                            href={`/partners/manage/${p.id}`}
+                            className="text-sm font-medium text-primary underline-offset-4 transition hover:underline"
+                          >
+                            Choose promises
+                          </Link>
+                        )}
+                        <RevokeButton id={p.id as string} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href={`/partners/manage/${p.id}`}
-                        className="text-sm font-medium text-primary underline-offset-4 transition hover:underline"
-                      >
-                        Choose promises
-                      </Link>
-                      <RevokeButton id={p.id as string} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -177,7 +198,10 @@ export default async function PartnersPage() {
           </section>
         </div>
 
-        <InvitePartnerForm />
+        <div className="space-y-5">
+          <InvitePartnerForm />
+          <InviteLinkGenerator />
+        </div>
       </div>
     </div>
   );

@@ -228,3 +228,107 @@ export async function applySharesToAllPartners(
   revalidatePath("/partners");
   return {};
 }
+
+/** Generate a one-time shareable invite link (no email required). */
+export async function generateInviteLink(input: {
+  visibility: "everything" | "overdue_only" | "selected_promises";
+}): Promise<ActionResult & { url?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { data, error } = await supabase
+    .from("accountability_partners")
+    .insert({
+      owner_id: user.id,
+      visibility: input.visibility,
+      status: "pending",
+    })
+    .select("invite_token")
+    .single();
+  if (error || !data) return { error: "Couldn't create an invite link." };
+
+  const site = await baseUrl();
+  revalidatePath("/partners");
+  return { url: `${site}/partners/invite/${data.invite_token}` };
+}
+
+/** Claim a shareable link (attach the current user as its partner). */
+export async function claimInviteLink(
+  token: string,
+): Promise<ActionResult & { id?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { data, error } = await supabase.rpc("claim_invite_link", {
+    p_token: token,
+  });
+  if (error) {
+    const msg = `${error.message}`.includes("cannot_invite_yourself")
+      ? "That's your own invite link."
+      : "This invite link is invalid or has already been used.";
+    return { error: msg };
+  }
+
+  revalidatePath("/partners");
+  return { id: data as string };
+}
+
+/**
+ * Reciprocal invite: after accepting a partnership where I'm the partner
+ * (I watch them), invite them back so they can watch me too. Creates a new,
+ * independent invitation that they must separately accept.
+ */
+export async function inviteBack(
+  originalRowId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { data: original } = await supabase
+    .from("accountability_partners")
+    .select("owner_id, status")
+    .eq("id", originalRowId)
+    .eq("partner_id", user.id)
+    .maybeSingle();
+  if (!original || original.status !== "accepted") {
+    return { error: "That partnership isn't active yet." };
+  }
+
+  const theirId = original.owner_id as string;
+
+  const { data: already } = await supabase
+    .from("accountability_partners")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("partner_id", theirId);
+  if ((already ?? []).length > 0) {
+    return { error: "You've already invited them." };
+  }
+
+  const { data: theirProfile } = await supabase
+    .from("user_profiles")
+    .select("email")
+    .eq("id", theirId)
+    .maybeSingle();
+
+  const { error } = await supabase.from("accountability_partners").insert({
+    owner_id: user.id,
+    partner_id: theirId,
+    partner_email: (theirProfile?.email as string | null) ?? null,
+    visibility: "overdue_only",
+    status: "pending",
+  });
+  if (error) return { error: "Couldn't send the invitation back." };
+
+  revalidatePath("/partners");
+  return {};
+}
