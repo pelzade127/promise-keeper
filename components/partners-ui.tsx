@@ -91,8 +91,7 @@ export function InvitePartnerForm() {
         </button>
         <p className="text-xs text-muted-foreground">
           They'll see this invitation next time they sign in with that email.
-          Let them know to expect it — this app doesn't send automatic emails
-          yet.
+          This app doesn't send emails — let them know to expect it yourself.
         </p>
       </div>
     </div>
@@ -117,12 +116,14 @@ export function RevokeButton({ id }: { id: string }) {
   );
 }
 
-export function RespondButtons({
+function RespondButtons({
   id,
   ownerName,
+  onResolved,
 }: {
   id: string;
   ownerName: string;
+  onResolved: () => void;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -134,11 +135,15 @@ export function RespondButtons({
     await respondToInvite({ id, accept });
     setBusy(false);
     if (accept) {
-      // Deliberately don't refresh yet — refreshing now would re-fetch the
-      // page, see this invite is no longer "pending", and unmount this card
-      // (and its reciprocal-invite prompt) before the person can answer it.
+      // Don't refresh yet — the server action's own revalidatePath already
+      // marks /partners stale, and any refresh (ours or Next's automatic
+      // one) would re-fetch the page, see this invite is no longer
+      // "pending", and unmount this card before the reciprocal question can
+      // be answered. The parent list (PendingInvitations) is what actually
+      // keeps this card alive in the meantime.
       setAccepted(true);
     } else {
+      onResolved();
       router.refresh();
     }
   }
@@ -150,7 +155,11 @@ export function RespondButtons({
       await inviteBack(id);
       setBusy(false);
     }
-    router.refresh();
+    // Now it's safe: the person has answered, so let the page catch up.
+    setTimeout(() => {
+      onResolved();
+      router.refresh();
+    }, 900);
   }
 
   if (accepted) {
@@ -199,6 +208,49 @@ export function RespondButtons({
         Decline
       </button>
     </div>
+  );
+}
+
+export function PendingInvitations({
+  initial,
+}: {
+  initial: { id: string; ownerName: string }[];
+}) {
+  // Owns its own list, seeded once from the server. A card is only removed
+  // once its own flow fully resolves — never because the underlying server
+  // data (which can change mid-flow, e.g. via revalidatePath) says the
+  // invite is no longer "pending". This is what keeps the reciprocal-invite
+  // question from getting yanked away before someone can answer it.
+  const [rows, setRows] = useState(initial);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Invitations for you
+      </h2>
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div
+            key={r.id}
+            className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-secondary px-5 py-4"
+          >
+            <p className="text-foreground">
+              <span className="font-medium">{r.ownerName}</span> invited you
+              to help keep them accountable.
+            </p>
+            <RespondButtons
+              id={r.id}
+              ownerName={r.ownerName}
+              onResolved={() =>
+                setRows((prev) => prev.filter((x) => x.id !== r.id))
+              }
+            />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

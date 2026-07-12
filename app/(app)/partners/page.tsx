@@ -5,7 +5,7 @@ import {
   InvitePartnerForm,
   InviteLinkGenerator,
   RevokeButton,
-  RespondButtons,
+  PendingInvitations,
 } from "@/components/partners-ui";
 
 export const dynamic = "force-dynamic";
@@ -91,30 +91,12 @@ export default async function PartnersPage() {
         </p>
       </header>
 
-      {pendingForMe.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Invitations for you
-          </h2>
-          <div className="space-y-2">
-            {pendingForMe.map((r) => {
-              const ownerName = nameById.get(r.owner_id as string) ?? "Someone";
-              return (
-                <div
-                  key={r.id as string}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-secondary px-5 py-4"
-                >
-                  <p className="text-foreground">
-                    <span className="font-medium">{ownerName}</span> invited
-                    you to help keep them accountable.
-                  </p>
-                  <RespondButtons id={r.id as string} ownerName={ownerName} />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <PendingInvitations
+        initial={pendingForMe.map((r) => ({
+          id: r.id as string,
+          ownerName: nameById.get(r.owner_id as string) ?? "Someone",
+        }))}
+      />
 
       <div className="grid gap-8 md:grid-cols-[1fr_320px]">
         <div className="space-y-8">

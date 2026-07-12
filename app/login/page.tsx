@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   signIn,
   signUp,
@@ -130,12 +131,12 @@ function LoginPageInner() {
         <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
           {mode === "signin" && (
             <>
-              <button
-                onClick={() => setMode("reset")}
+              <Link
+                href="/forgot-password"
                 className="underline-offset-4 hover:text-foreground hover:underline"
               >
                 Forgot your password?
-              </button>
+              </Link>
               <p>
                 New here?{" "}
                 <button
