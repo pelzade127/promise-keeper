@@ -134,8 +134,10 @@ export function RespondButtons({
     await respondToInvite({ id, accept });
     setBusy(false);
     if (accept) {
+      // Deliberately don't refresh yet — refreshing now would re-fetch the
+      // page, see this invite is no longer "pending", and unmount this card
+      // (and its reciprocal-invite prompt) before the person can answer it.
       setAccepted(true);
-      router.refresh();
     } else {
       router.refresh();
     }
@@ -143,10 +145,11 @@ export function RespondButtons({
 
   async function sendBack(yes: boolean) {
     setAskedBack(true);
-    if (!yes) return;
-    setBusy(true);
-    await inviteBack(id);
-    setBusy(false);
+    if (yes) {
+      setBusy(true);
+      await inviteBack(id);
+      setBusy(false);
+    }
     router.refresh();
   }
 
