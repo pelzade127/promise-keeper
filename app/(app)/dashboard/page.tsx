@@ -47,6 +47,39 @@ function Section({
   );
 }
 
+function SelfSection({
+  promises,
+  today,
+  faithMode,
+}: {
+  promises: PromiseWithRelations[];
+  today: string;
+  faithMode: boolean;
+}) {
+  if (promises.length === 0) return null;
+  return (
+    <section className="mt-14 border-t border-border pt-8">
+      <h2 className="mb-1 text-sm font-medium text-muted-foreground">
+        Also for yourself
+      </h2>
+      <p className="mb-4 text-xs text-muted-foreground/70">
+        The dashboard above is about the people in your life. This is just
+        for you.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {promises.map((p) => (
+          <PromiseCard
+            key={p.id}
+            promise={p}
+            today={today}
+            faithMode={faithMode}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default async function DashboardPage() {
   const data = await getDashboardData();
   const today = todayISO();
@@ -126,6 +159,12 @@ export default async function DashboardPage() {
           />
         </>
       )}
+
+      <SelfSection
+        promises={data.selfPromises}
+        today={today}
+        faithMode={data.faithMode}
+      />
     </div>
   );
 }

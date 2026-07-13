@@ -9,6 +9,10 @@ export interface DashboardData {
   dueToday: PromiseWithRelations[];
   followUps: PromiseWithRelations[];
   openCare: PromiseWithRelations[];
+  /** Promises to yourself — kept separate so they don't crowd out the
+   * people-focused sections above; the dashboard's job is remembering
+   * others first. */
+  selfPromises: PromiseWithRelations[];
   /** Distinct people awaiting follow-through across overdue + today. */
   peopleWaiting: number;
 }
@@ -70,10 +74,17 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   const overdue: PromiseWithRelations[] = [];
   const dueToday: PromiseWithRelations[] = [];
   const openCare: PromiseWithRelations[] = [];
+  const selfPromises: PromiseWithRelations[] = [];
 
   const followUpIds = new Set(followUps.map((p) => p.id));
 
   for (const p of rows) {
+    // Self-promises get their own quiet section, not the people-focused
+    // buckets — the dashboard's job is remembering other people first.
+    if (p.target_type === "self") {
+      selfPromises.push(p);
+      continue;
+    }
     if (p.promise_type === "open_ended_care") {
       openCare.push(p);
       continue;
@@ -105,6 +116,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     dueToday,
     followUps,
     openCare,
+    selfPromises,
     peopleWaiting: waiting.size,
   };
 }
