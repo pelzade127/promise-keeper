@@ -27,7 +27,7 @@ export type PromiseDetails = {
 };
 
 /** Steps within the "complete a promise" flow (see promise-card.tsx). */
-export type CompletionStepName = "confirm" | "reflect" | "followup" | "done";
+export type CompletionStepName = "confirm" | "reflect" | "continue" | "followup" | "done";
 
 export const field =
   "w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30";

@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { faithEncouragements } from "@/lib/faith";
+import { faithEncouragements, faithOccurrenceEncouragements } from "@/lib/faith";
 import type { PromiseWithRelations } from "@/types/database";
 import { CompletionStep } from "@/components/promise-flow/completion-step";
 import { ReflectionStep } from "@/components/promise-flow/reflection-step";
+import { ContinuationStep } from "@/components/promise-flow/continuation-step";
 import { FollowUpStep } from "@/components/promise-flow/follow-up-step";
 import { MissedPromiseStep } from "@/components/promise-flow/missed-promise-step";
 import { EncouragementStep } from "@/components/promise-flow/encouragement-step";
@@ -40,6 +41,25 @@ function encouragements(name: string, isSelf: boolean): string[] {
   ];
 }
 
+/**
+ * A single act of care within an ongoing promise — not the whole commitment
+ * finishing. Kept distinct from `encouragements()` on purpose: showing up
+ * once more shouldn't sound like closing something out.
+ */
+function occurrenceEncouragements(name: string, isSelf: boolean): string[] {
+  if (isSelf) {
+    return [
+      "One more act of showing up for yourself. Not the finish line — just today.",
+      "You didn't have to be finished to be faithful today.",
+    ];
+  }
+  return [
+    `You showed up for ${name} again today.`,
+    `Another quiet act of care for ${name} — the story keeps going.`,
+    `${name} was on your mind, and you did something about it.`,
+  ];
+}
+
 function isoInDays(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -49,12 +69,17 @@ function isoInDays(days: number): string {
 function formatDue(p: PromiseWithRelations, today: string): string {
   if (p.promise_type === "open_ended_care") return "Ongoing care";
   if (!p.due_date) return "No date set";
-  if (p.due_date === today) return "Today";
-  if (p.due_date < today) return "Overdue";
-  return new Date(p.due_date + "T00:00:00").toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  if (p.due_date === today) {
+    return p.promise_type === "recurring" ? "Time for this again" : "Due today";
+  }
+  if (p.due_date < today) {
+    return p.promise_type === "recurring" ? "Due for another check-in" : "Overdue";
+  }
+  const dateLabel = new Date(p.due_date + "T00:00:00").toLocaleDateString(
+    undefined,
+    { month: "short", day: "numeric" },
+  );
+  return p.promise_type === "recurring" ? `Next: ${dateLabel}` : dateLabel;
 }
 
 export function PromiseCard({
@@ -70,16 +95,24 @@ export function PromiseCard({
 }) {
   const router = useRouter();
   const isSelf = promise.target_type === "self";
+  const isOngoing = promise.promise_type !== "one_time";
   const who = isSelf
     ? "Yourself"
     : promise.target_type === "group"
       ? (promise.group?.name ?? "Your group")
       : (promise.person?.name ?? "Someone");
 
-  const isOverdue =
+  // A hard deadline missed (one-time only) reads as urgent. A recurring
+  // promise past its next rhythm beat isn't a failure — it just needs
+  // attention, so it gets a softer tone, not an alarm.
+  const isPastDeadline =
+    promise.promise_type === "one_time" &&
     promise.due_date != null &&
-    promise.due_date < today &&
-    promise.promise_type !== "open_ended_care";
+    promise.due_date < today;
+  const isPastRhythm =
+    promise.promise_type === "recurring" &&
+    promise.due_date != null &&
+    promise.due_date < today;
   const followUpDue =
     promise.next_follow_up_date != null && promise.next_follow_up_date <= today;
 
@@ -118,7 +151,11 @@ export function PromiseCard({
           <span
             className={cn(
               "text-xs font-medium",
-              isOverdue ? "text-destructive" : "text-muted-foreground",
+              isPastDeadline
+                ? "text-destructive"
+                : isPastRhythm
+                  ? "text-accent-foreground/80"
+                  : "text-muted-foreground",
             )}
           >
             {followUpDue ? "Time to check in" : formatDue(promise, today)}
@@ -138,7 +175,7 @@ export function PromiseCard({
                   onClick={() => setMode("complete")}
                   className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition hover:bg-primary/90"
                 >
-                  Complete
+                  {isOngoing ? "I did this" : "Complete"}
                 </button>
                 <button
                   onClick={() => setMode("recommit")}
@@ -276,15 +313,11 @@ function CompleteFlow({
   setBusy: (b: boolean) => void;
   onDone: () => void;
 }) {
+  const isOngoing = promise.promise_type !== "one_time";
   const hasFollowUp = promise.follow_up_type !== "none";
   const [step, setStep] = useState<CompletionStepName>("confirm");
   const [reflection, setReflection] = useState("");
-  const [message] = useState(() => {
-    const list = faithMode
-      ? faithEncouragements(who, isSelf)
-      : encouragements(who, isSelf);
-    return list[Math.floor(Math.random() * list.length)];
-  });
+  const [message, setMessage] = useState("");
 
   const isPrayer = promise.category?.name === "Prayer";
   const reflectPrompt =
@@ -294,18 +327,31 @@ function CompleteFlow({
         ? "What did you pray about?"
         : "Anything you'd like to remember about this?";
 
-  async function finish(scheduleFollowUp: boolean) {
+  async function finish(scheduleFollowUp: boolean, finalize = false) {
+    const endsHere = !isOngoing || finalize;
+    const pool = endsHere
+      ? faithMode
+        ? faithEncouragements(who, isSelf)
+        : encouragements(who, isSelf)
+      : faithMode
+        ? faithOccurrenceEncouragements(who, isSelf)
+        : occurrenceEncouragements(who, isSelf);
+    setMessage(pool[Math.floor(Math.random() * pool.length)]);
+
     setBusy(true);
     await completePromise({
       promiseId: promise.id,
       reflection: reflection || undefined,
       scheduleFollowUp,
+      finalize,
     });
     setStep("done");
     setBusy(false);
   }
 
   async function answerPrayer() {
+    const pool = faithEncouragements(who, isSelf);
+    setMessage(pool[Math.floor(Math.random() * pool.length)]);
     setBusy(true);
     await markPrayerAnswered({
       promiseId: promise.id,
@@ -330,10 +376,34 @@ function CompleteFlow({
         prompt={reflectPrompt}
         reflection={reflection}
         onChange={setReflection}
-        onContinue={() => (hasFollowUp ? setStep("followup") : finish(false))}
+        onContinue={() => {
+          if (isOngoing) {
+            setStep("continue");
+          } else if (hasFollowUp) {
+            setStep("followup");
+          } else {
+            finish(false);
+          }
+        }}
         busy={busy}
         showAnsweredPrayer={faithMode && isPrayer}
         onAnsweredPrayer={answerPrayer}
+      />
+    );
+  }
+
+  if (step === "continue") {
+    return (
+      <ContinuationStep
+        who={who}
+        busy={busy}
+        onChoose={(keepGoing) => {
+          if (keepGoing) {
+            hasFollowUp ? setStep("followup") : finish(false);
+          } else {
+            finish(false, true);
+          }
+        }}
       />
     );
   }

@@ -41,7 +41,8 @@ export type JournalEntryType =
   | "reflection" | "prayer" | "update" | "follow_up" | "note" | "memory";
 export type PromiseEventType =
   | "created" | "completed" | "evolved" | "recommitted" | "released"
-  | "missed" | "follow_up_completed" | "journal_added" | "memorialized";
+  | "missed" | "follow_up_completed" | "journal_added" | "memorialized"
+  | "care_occurrence";
 export type MissedReason =
   | "forgot" | "got_busy" | "avoided" | "circumstances_changed" | "no_longer_relevant";
 

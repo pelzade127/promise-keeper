@@ -125,10 +125,21 @@ function recurrenceDays(
  * open-ended-care promises stay active and roll forward to their next date.
  * Always logs a 'completed' timeline event (with the optional reflection).
  */
+/**
+ * Record an act of faithfulness toward a promise.
+ *
+ * One-time promises always end here — there's only one act, and it's the
+ * whole promise. Recurring and open-ended-care promises stay active by
+ * default: this logs a *care occurrence* (one act, not the whole commitment)
+ * and rolls the next due date forward. Pass `finalize: true` to instead end
+ * a recurring/open-ended promise deliberately — "this is fulfilled now,"
+ * not just "I did it again."
+ */
 export async function completePromise(input: {
   promiseId: string;
   reflection?: string;
   scheduleFollowUp?: boolean;
+  finalize?: boolean;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const {
@@ -145,8 +156,10 @@ export async function completePromise(input: {
 
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = {};
+  const isOngoing = promise.promise_type !== "one_time";
+  const endsHere = !isOngoing || input.finalize;
 
-  if (promise.promise_type === "one_time") {
+  if (endsHere) {
     updates.status = "completed";
     updates.completed_at = now;
   } else {
@@ -179,7 +192,7 @@ export async function completePromise(input: {
     promise_id: promise.id,
     person_id: promise.person_id,
     group_id: promise.group_id,
-    event_type: "completed",
+    event_type: endsHere ? "completed" : "care_occurrence",
     note: promise.title,
     reflection: input.reflection?.trim() || null,
   });

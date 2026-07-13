@@ -65,7 +65,7 @@ export default async function JourneyPage() {
     supabase
       .from("promise_events")
       .select("id, event_type, person_id, group_id, note, reflection, created_at")
-      .eq("event_type", "completed")
+      .in("event_type", ["completed", "care_occurrence"])
       .order("created_at", { ascending: false }),
     supabase.from("people").select("id, name"),
     supabase.from("groups").select("id, name"),
@@ -123,7 +123,7 @@ export default async function JourneyPage() {
   };
 
   const stats: { label: string; value: number }[] = [
-    { label: "Promises kept", value: keptCount },
+    { label: "Acts of faithfulness", value: keptCount },
     { label: "Kept in the last 30 days", value: keptLast30 },
     { label: "People shown up for", value: peopleSet.size },
     { label: "Groups cared for", value: groupSet.size },
@@ -215,7 +215,9 @@ export default async function JourneyPage() {
                 <li key={e.id as string} className="relative">
                   <span className="absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
                   <p className="text-foreground">
-                    You kept your word to{" "}
+                    {e.event_type === "care_occurrence"
+                      ? "You showed up for"
+                      : "You kept your word to"}{" "}
                     <span className="font-medium">{whoOfEvent(e)}</span>
                     {(e.note as string | null) ? ` — ${e.note as string}` : ""}
                   </p>

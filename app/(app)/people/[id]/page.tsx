@@ -19,6 +19,7 @@ type TimelineItem = {
 const EVENT_LABEL: Record<string, string> = {
   created: "Made a promise",
   completed: "Kept a promise",
+  care_occurrence: "Showed up",
   recommitted: "Recommitted",
   released: "Released a promise",
   missed: "Missed a promise",

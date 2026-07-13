@@ -118,7 +118,7 @@ export function verseOfToday(): Verse {
   return VERSES[dayOfYear % VERSES.length];
 }
 
-/** Faith-framed encouragements shown after keeping a promise. */
+/** Faith-framed encouragements shown after keeping a promise (its true completion). */
 export function faithEncouragements(name: string, isSelf: boolean): string[] {
   if (isSelf) {
     return [
@@ -132,5 +132,30 @@ export function faithEncouragements(name: string, isSelf: boolean): string[] {
     `Faithfulness in small things is faithfulness indeed. ${name} is seen.`,
     "“Bear ye one another’s burdens.” — Galatians 6:2",
     `Well done. ${name} is worth it.`,
+  ];
+}
+
+/**
+ * Faith-framed encouragements for a single act of care within an ongoing
+ * promise — one occurrence, not the whole commitment finishing. Deliberately
+ * softer, present-tense, no note of finality or performance: showing up
+ * doesn't earn anything, it's just faithfulness in the moment.
+ */
+export function faithOccurrenceEncouragements(
+  name: string,
+  isSelf: boolean,
+): string[] {
+  if (isSelf) {
+    return [
+      "You showed up for yourself again today. That's enough.",
+      "One more faithful moment, not a finish line.",
+      "“A friend loveth at all times.” — Proverbs 17:17",
+    ];
+  }
+  return [
+    `You carried ${name} before God again today.`,
+    `Another quiet act of faithfulness toward ${name}.`,
+    "“A friend loveth at all times.” — Proverbs 17:17",
+    `${name} doesn't need you to be finished — just present, like today.`,
   ];
 }
