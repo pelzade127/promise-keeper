@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { faithEncouragements } from "@/lib/faith";
 import type { PromiseWithRelations } from "@/types/database";
+import { CompletionStep } from "@/components/promise-flow/completion-step";
+import { ReflectionStep } from "@/components/promise-flow/reflection-step";
+import { FollowUpStep } from "@/components/promise-flow/follow-up-step";
+import { MissedPromiseStep } from "@/components/promise-flow/missed-promise-step";
+import { EncouragementStep } from "@/components/promise-flow/encouragement-step";
+import type { CompletionStepName } from "@/components/promise-flow/types";
 import {
   completePromise,
   recommitPromise,
@@ -16,15 +22,6 @@ import {
 } from "@/app/(app)/promises/actions";
 
 type Mode = null | "complete" | "recommit" | "release" | "checkin";
-type Step = "confirm" | "reflect" | "followup" | "done";
-
-const RELEASE_REASONS: [string, string][] = [
-  ["forgot", "Forgot"],
-  ["got_busy", "Got busy"],
-  ["avoided", "Avoided it"],
-  ["circumstances_changed", "Things changed"],
-  ["no_longer_relevant", "No longer relevant"],
-];
 
 function encouragements(name: string, isSelf: boolean): string[] {
   if (isSelf) {
@@ -211,7 +208,6 @@ export function PromiseCard({
           )}
           {mode === "release" && (
             <ReleaseFlow
-              who={who}
               busy={busy}
               onRelease={async (reason) => {
                 setBusy(true);
@@ -281,7 +277,7 @@ function CompleteFlow({
   onDone: () => void;
 }) {
   const hasFollowUp = promise.follow_up_type !== "none";
-  const [step, setStep] = useState<Step>("confirm");
+  const [step, setStep] = useState<CompletionStepName>("confirm");
   const [reflection, setReflection] = useState("");
   const [message] = useState(() => {
     const list = faithMode
@@ -321,96 +317,32 @@ function CompleteFlow({
 
   if (step === "confirm") {
     return (
-      <div>
-        <h2 className="font-display text-2xl text-foreground">
-          You promised to {promise.title.toLowerCase()}.
-        </h2>
-        <p className="mt-2 text-muted-foreground">Did you follow through?</p>
-        <button
-          onClick={() => setStep("reflect")}
-          className="mt-5 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90"
-        >
-          Yes, I did
-        </button>
-      </div>
+      <CompletionStep
+        title={promise.title}
+        onConfirm={() => setStep("reflect")}
+      />
     );
   }
 
   if (step === "reflect") {
     return (
-      <div>
-        <h2 className="font-display text-2xl text-foreground">{reflectPrompt}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Optional — for you.</p>
-        <textarea
-          autoFocus
-          value={reflection}
-          onChange={(e) => setReflection(e.target.value)}
-          rows={3}
-          className="mt-3 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30"
-        />
-        <button
-          disabled={busy}
-          onClick={() => (hasFollowUp ? setStep("followup") : finish(false))}
-          className="mt-3 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-        >
-          {busy ? "Saving…" : "Continue"}
-        </button>
-        {faithMode && isPrayer && (
-          <button
-            disabled={busy}
-            onClick={answerPrayer}
-            className="mt-2 w-full rounded-lg border border-accent/40 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:bg-accent/20 disabled:opacity-60"
-          >
-            This prayer was answered
-          </button>
-        )}
-      </div>
+      <ReflectionStep
+        prompt={reflectPrompt}
+        reflection={reflection}
+        onChange={setReflection}
+        onContinue={() => (hasFollowUp ? setStep("followup") : finish(false))}
+        busy={busy}
+        showAnsweredPrayer={faithMode && isPrayer}
+        onAnsweredPrayer={answerPrayer}
+      />
     );
   }
 
   if (step === "followup") {
-    return (
-      <div>
-        <h2 className="font-display text-2xl text-foreground">
-          Would you like to check in with {who} again?
-        </h2>
-        <p className="mt-2 text-muted-foreground">
-          We'll remind you when it's time.
-        </p>
-        <div className="mt-5 space-y-2">
-          <button
-            disabled={busy}
-            onClick={() => finish(true)}
-            className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-          >
-            Yes, remind me
-          </button>
-          <button
-            disabled={busy}
-            onClick={() => finish(false)}
-            className="w-full rounded-lg px-4 py-2.5 text-muted-foreground transition hover:text-foreground"
-          >
-            Not this time
-          </button>
-        </div>
-      </div>
-    );
+    return <FollowUpStep who={who} busy={busy} onPick={finish} />;
   }
 
-  // done
-  return (
-    <div className="text-center">
-      <p className="font-display text-2xl leading-snug text-foreground">
-        {message}
-      </p>
-      <button
-        onClick={onDone}
-        className="mt-6 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90"
-      >
-        Close
-      </button>
-    </div>
-  );
+  return <EncouragementStep message={message} onClose={onDone} />;
 }
 
 function RecommitFlow({
@@ -467,52 +399,13 @@ function RecommitFlow({
 }
 
 function ReleaseFlow({
-  who,
   busy,
   onRelease,
 }: {
-  who: string;
   busy: boolean;
   onRelease: (reason?: string) => void;
 }) {
-  const [reason, setReason] = useState<string | undefined>(undefined);
-  return (
-    <div>
-      <h2 className="font-display text-2xl text-foreground">
-        It's okay to let this go.
-      </h2>
-      <p className="mt-2 text-muted-foreground">
-        The habit of keeping promises isn't built in a day. Keep becoming the
-        Promise Keeper you know you can be.
-      </p>
-      <p className="mt-4 text-sm text-muted-foreground">
-        Anything you want to note? (optional)
-      </p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {RELEASE_REASONS.map(([value, label]) => (
-          <button
-            key={value}
-            onClick={() => setReason(reason === value ? undefined : value)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-sm transition",
-              reason === value
-                ? "border-primary bg-secondary text-secondary-foreground"
-                : "border-border text-muted-foreground hover:border-primary/50",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <button
-        disabled={busy}
-        onClick={() => onRelease(reason)}
-        className="mt-5 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-      >
-        {busy ? "Releasing…" : `Release this promise`}
-      </button>
-    </div>
-  );
+  return <MissedPromiseStep busy={busy} onRelease={onRelease} />;
 }
 
 function CheckInFlow({
@@ -549,47 +442,35 @@ function CheckInFlow({
     return list[Math.floor(Math.random() * list.length)];
   });
 
-  if (step === "note") {
-    return (
-      <div>
-        <h2 className="font-display text-2xl text-foreground">
-          Checking in with {who}.
-        </h2>
-        <p className="mt-2 text-muted-foreground">How did it go? (optional)</p>
-        <textarea
-          autoFocus
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          placeholder="A line to remember this moment by."
-          className="mt-3 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
-        />
-        <button
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            await completeFollowUp(promise.id, note || undefined);
-            setStep("done");
-            setBusy(false);
-          }}
-          className="mt-3 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-        >
-          {busy ? "Saving…" : "Mark checked in"}
-        </button>
-      </div>
-    );
+  if (step === "done") {
+    return <EncouragementStep message={message} onClose={onDone} />;
   }
 
   return (
-    <div className="text-center">
-      <p className="font-display text-2xl leading-snug text-foreground">
-        {message}
-      </p>
+    <div>
+      <h2 className="font-display text-2xl text-foreground">
+        Checking in with {who}.
+      </h2>
+      <p className="mt-2 text-muted-foreground">How did it go? (optional)</p>
+      <textarea
+        autoFocus
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+        placeholder="A line to remember this moment by."
+        className="mt-3 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
+      />
       <button
-        onClick={onDone}
-        className="mt-6 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await completeFollowUp(promise.id, note || undefined);
+          setStep("done");
+          setBusy(false);
+        }}
+        className="mt-3 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
       >
-        Close
+        {busy ? "Saving…" : "Mark checked in"}
       </button>
     </div>
   );

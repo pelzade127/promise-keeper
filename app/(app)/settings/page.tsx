@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import { FaithModeToggle } from "@/components/faith-mode-toggle";
 import { SecurityQuestionForm } from "@/components/security-question-form";
+import { ChangePasswordForm } from "@/components/change-password-form";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,12 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("faith_mode, security_question")
+    .select("faith_mode, security_question_1, security_question_2")
     .eq("id", user.id)
     .maybeSingle();
+
+  const q1 = (profile?.security_question_1 as string | null) ?? null;
+  const q2 = (profile?.security_question_2 as string | null) ?? null;
 
   return (
     <div className="container py-10 sm:py-14">
@@ -32,10 +36,8 @@ export default async function SettingsPage() {
 
       <div className="max-w-2xl space-y-4">
         <FaithModeToggle initial={Boolean(profile?.faith_mode)} />
-        <SecurityQuestionForm
-          hasQuestion={Boolean(profile?.security_question)}
-          currentQuestion={(profile?.security_question as string | null) ?? null}
-        />
+        <SecurityQuestionForm currentQuestion1={q1} currentQuestion2={q2} />
+        <ChangePasswordForm question1={q1} question2={q2} />
       </div>
     </div>
   );

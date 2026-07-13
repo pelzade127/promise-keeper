@@ -68,11 +68,57 @@ function AuthForm({ mode, next }: { mode: Mode; next: string }) {
           name="password"
           type="password"
           required
-          minLength={6}
+          minLength={8}
           placeholder="Password"
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           className={fieldClass}
         />
+      )}
+
+      {mode === "signup" && (
+        <input
+          name="confirm_password"
+          type="password"
+          required
+          minLength={8}
+          placeholder="Confirm password"
+          autoComplete="new-password"
+          className={fieldClass}
+        />
+      )}
+
+      {mode === "signup" && (
+        <div className="space-y-3 rounded-lg border border-border bg-card/60 p-3.5">
+          <p className="text-sm text-muted-foreground">
+            Set up two security questions of your own — you'll use these to
+            reset or change your password later, since this app doesn't send
+            emails.
+          </p>
+          <input
+            name="security_question_1"
+            required
+            placeholder="Security question 1 (make up your own)"
+            className={fieldClass}
+          />
+          <input
+            name="security_answer_1"
+            required
+            placeholder="Answer 1"
+            className={fieldClass}
+          />
+          <input
+            name="security_question_2"
+            required
+            placeholder="Security question 2 (different from the first)"
+            className={fieldClass}
+          />
+          <input
+            name="security_answer_2"
+            required
+            placeholder="Answer 2"
+            className={fieldClass}
+          />
+        </div>
       )}
 
       {state.error && (

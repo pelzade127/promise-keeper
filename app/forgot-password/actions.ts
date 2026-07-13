@@ -5,10 +5,10 @@ import { verifyAnswer } from "@/lib/security-question";
 
 type Result = { error?: string; message?: string };
 
-/** Look up the security question for an email, without revealing anything else. */
-export async function getSecurityQuestion(
+/** Look up both security questions for an email, without revealing anything else. */
+export async function getSecurityQuestions(
   email: string,
-): Promise<Result & { question?: string }> {
+): Promise<Result & { question1?: string; question2?: string }> {
   const clean = email.trim().toLowerCase();
   if (!clean) return { error: "Enter your email." };
 
@@ -24,29 +24,35 @@ export async function getSecurityQuestion(
 
   const { data: profile } = await admin
     .from("user_profiles")
-    .select("security_question")
+    .select("security_question_1, security_question_2")
     .ilike("email", clean)
     .maybeSingle();
 
-  if (!profile?.security_question) {
+  if (!profile?.security_question_1 || !profile?.security_question_2) {
     // Deliberately vague — don't reveal whether the account exists.
     return {
       error:
-        "No security question is set up for that email. Ask whoever manages this app for help.",
+        "No security questions are set up for that email. Ask whoever manages this app for help.",
     };
   }
 
-  return { question: profile.security_question as string };
+  return {
+    question1: profile.security_question_1 as string,
+    question2: profile.security_question_2 as string,
+  };
 }
 
-/** Verify the answer and, if correct, set a new password directly. */
-export async function resetPasswordWithSecurityAnswer(input: {
+/** Verify both answers and, if correct, set a new password directly. */
+export async function resetPasswordWithSecurityAnswers(input: {
   email: string;
-  answer: string;
+  answer1: string;
+  answer2: string;
   newPassword: string;
 }): Promise<Result> {
   const email = input.email.trim().toLowerCase();
-  if (!input.answer.trim()) return { error: "Enter your answer." };
+  if (!input.answer1.trim() || !input.answer2.trim()) {
+    return { error: "Answer both questions." };
+  }
   if (input.newPassword.length < 8) {
     return { error: "New password must be at least 8 characters." };
   }
@@ -60,20 +66,24 @@ export async function resetPasswordWithSecurityAnswer(input: {
 
   const { data: profile } = await admin
     .from("user_profiles")
-    .select("id, security_answer_hash")
+    .select("id, security_answer_hash_1, security_answer_hash_2")
     .ilike("email", email)
     .maybeSingle();
 
-  if (!profile?.security_answer_hash) {
+  if (!profile?.security_answer_hash_1 || !profile?.security_answer_hash_2) {
     return { error: "That didn't match. Please try again." };
   }
 
-  const correct = verifyAnswer(
-    input.answer,
-    profile.security_answer_hash as string,
+  const correct1 = verifyAnswer(
+    input.answer1,
+    profile.security_answer_hash_1 as string,
   );
-  if (!correct) {
-    return { error: "That answer doesn't match. Please try again." };
+  const correct2 = verifyAnswer(
+    input.answer2,
+    profile.security_answer_hash_2 as string,
+  );
+  if (!correct1 || !correct2) {
+    return { error: "Those answers don't match. Please try again." };
   }
 
   const { error } = await admin.auth.admin.updateUserById(

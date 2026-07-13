@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { PromiseFlow } from "@/components/promise-flow";
+import { PromiseFlow } from "@/components/promise-flow/promise-flow";
 
 export const dynamic = "force-dynamic";
 

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  getSecurityQuestion,
-  resetPasswordWithSecurityAnswer,
+  getSecurityQuestions,
+  resetPasswordWithSecurityAnswers,
 } from "./actions";
 
 const field =
@@ -13,31 +13,40 @@ const field =
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<"email" | "answer" | "done">("email");
   const [email, setEmail] = useState("");
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [question1, setQuestion1] = useState("");
+  const [question2, setQuestion2] = useState("");
+  const [answer1, setAnswer1] = useState("");
+  const [answer2, setAnswer2] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function lookup() {
     setError(null);
     setBusy(true);
-    const res = await getSecurityQuestion(email);
+    const res = await getSecurityQuestions(email);
     setBusy(false);
-    if (res.error || !res.question) {
+    if (res.error || !res.question1 || !res.question2) {
       setError(res.error ?? "Something went wrong.");
       return;
     }
-    setQuestion(res.question);
+    setQuestion1(res.question1);
+    setQuestion2(res.question2);
     setStep("answer");
   }
 
   async function submit() {
     setError(null);
+    if (newPassword !== confirmPassword) {
+      setError("Those passwords don't match.");
+      return;
+    }
     setBusy(true);
-    const res = await resetPasswordWithSecurityAnswer({
+    const res = await resetPasswordWithSecurityAnswers({
       email,
-      answer,
+      answer1,
+      answer2,
       newPassword,
     });
     setBusy(false);
@@ -61,7 +70,7 @@ export default function ForgotPasswordPage() {
               Reset your password
             </h1>
             <p className="mt-2 text-center text-muted-foreground">
-              Enter your email to answer your security question.
+              Enter your email to answer your security questions.
             </p>
             <div className="mt-6 space-y-3">
               <input
@@ -71,9 +80,7 @@ export default function ForgotPasswordPage() {
                 placeholder="Email"
                 className={field}
               />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <button
                 onClick={lookup}
                 disabled={busy}
@@ -88,18 +95,31 @@ export default function ForgotPasswordPage() {
         {step === "answer" && (
           <>
             <h1 className="text-center font-display text-3xl text-foreground">
-              Answer your question
+              Answer your questions
             </h1>
-            <p className="mt-2 text-center text-muted-foreground">
-              {question}
-            </p>
             <div className="mt-6 space-y-3">
-              <input
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Your answer"
-                className={field}
-              />
+              <div>
+                <p className="mb-1.5 text-sm text-muted-foreground">
+                  {question1}
+                </p>
+                <input
+                  value={answer1}
+                  onChange={(e) => setAnswer1(e.target.value)}
+                  placeholder="Your answer"
+                  className={field}
+                />
+              </div>
+              <div>
+                <p className="mb-1.5 text-sm text-muted-foreground">
+                  {question2}
+                </p>
+                <input
+                  value={answer2}
+                  onChange={(e) => setAnswer2(e.target.value)}
+                  placeholder="Your answer"
+                  className={field}
+                />
+              </div>
               <input
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -107,9 +127,14 @@ export default function ForgotPasswordPage() {
                 placeholder="New password (8+ characters)"
                 className={field}
               />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
+              <input
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                type="password"
+                placeholder="Confirm new password"
+                className={field}
+              />
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <button
                 onClick={submit}
                 disabled={busy}
