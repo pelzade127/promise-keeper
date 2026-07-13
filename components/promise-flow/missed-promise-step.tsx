@@ -13,9 +13,11 @@ const RELEASE_REASONS: [string, string][] = [
 
 export function MissedPromiseStep({
   busy,
+  faithMode = false,
   onRelease,
 }: {
   busy: boolean;
+  faithMode?: boolean;
   onRelease: (reason?: string) => void;
 }) {
   const [reason, setReason] = useState<string | undefined>(undefined);
@@ -25,8 +27,9 @@ export function MissedPromiseStep({
         It's okay to let this go.
       </h2>
       <p className="mt-2 text-muted-foreground">
-        The habit of keeping promises isn't built in a day. Keep becoming the
-        Promise Keeper you know you can be.
+        {faithMode
+          ? "Grace is bigger than a promise you couldn't keep. Releasing this isn't failure — it's honesty. You're still loved exactly as much as when you made it."
+          : "The habit of keeping promises isn't built in a day. Keep becoming the Promise Keeper you know you can be."}
       </p>
       <p className="mt-4 text-sm text-muted-foreground">
         Anything you want to note? (optional)

@@ -119,7 +119,27 @@ export async function respondToInvite(input: {
   return {};
 }
 
-/** Change what a partner can see. */
+/** Toggle whether a partner sees actual promise titles, or just that one exists. */
+export async function setShowTitles(input: {
+  id: string;
+  showTitles: boolean;
+}): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase
+    .from("accountability_partners")
+    .update({ show_titles: input.showTitles })
+    .eq("id", input.id)
+    .eq("owner_id", user.id);
+  if (error) return { error: "Couldn't update that." };
+
+  revalidatePath(`/partners/manage/${input.id}`);
+  return {};
+}
 export async function setPartnerVisibility(input: {
   id: string;
   visibility: "everything" | "overdue_only" | "selected_promises";

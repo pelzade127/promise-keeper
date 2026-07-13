@@ -27,7 +27,7 @@ export default async function ManagePartnerPage({
 
   const { data: partner } = await supabase
     .from("accountability_partners")
-    .select("id, partner_email, visibility, owner_id")
+    .select("id, partner_email, visibility, owner_id, show_titles")
     .eq("id", id)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -98,6 +98,7 @@ export default async function ManagePartnerPage({
           initialVisibility={initialVisibility}
           promises={promiseList}
           initialShared={initialShared}
+          initialShowTitles={Boolean(partner.show_titles ?? true)}
         />
       </div>
     </div>

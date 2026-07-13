@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setFaithMode } from "@/app/(app)/settings/actions";
 
@@ -8,6 +8,15 @@ export function FaithModeToggle({ initial }: { initial: boolean }) {
   const router = useRouter();
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
+
+  // Re-sync whenever the server's real value changes underneath us — e.g.
+  // after router.refresh() re-renders this page with fresh data, or after
+  // navigating away and back to a cached view of the page. Without this, the
+  // switch's local state can drift from the truth: it looks "stuck," and
+  // clicking it just re-sends the same value instead of actually flipping it.
+  useEffect(() => {
+    setOn(initial);
+  }, [initial]);
 
   async function toggle() {
     const next = !on;

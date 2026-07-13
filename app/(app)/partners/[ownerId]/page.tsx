@@ -34,6 +34,17 @@ export default async function PartnerViewPage({
     .eq("id", ownerId)
     .maybeSingle();
 
+  // What does THIS partnership let us see? Separate from whether a promise
+  // is shared at all (visibility mode) is whether its title is revealed.
+  const { data: partnership } = await supabase
+    .from("accountability_partners")
+    .select("show_titles")
+    .eq("owner_id", ownerId)
+    .eq("partner_id", user.id)
+    .eq("status", "accepted")
+    .maybeSingle();
+  const showTitles = Boolean(partnership?.show_titles ?? true);
+
   // RLS returns only the promises this partnership is allowed to see.
   const { data: promises } = await supabase
     .from("promises")
@@ -55,7 +66,9 @@ export default async function PartnerViewPage({
 
   const Card = ({ p }: { p: Record<string, unknown> }) => (
     <div className="rounded-lg border border-border bg-card px-5 py-4">
-      <p className="text-foreground">{p.title as string}</p>
+      <p className="text-foreground">
+        {showTitles ? (p.title as string) : "A promise"}
+      </p>
       <p className="mt-0.5 text-sm text-muted-foreground">
         {whoLabel(p.target_type as string)}
         {p.due_date ? ` · due ${p.due_date as string}` : ""}
@@ -77,8 +90,8 @@ export default async function PartnerViewPage({
       <header className="mt-4 mb-8">
         <h1 className="font-display text-4xl text-foreground">{name}</h1>
         <p className="mt-2 text-muted-foreground">
-          You're here to encourage, not to police. A little "how's it going?"
-          goes a long way.
+          You're here to encourage, not to check up on them. A quiet "thinking
+          of you" goes further than a reminder.
         </p>
       </header>
 
@@ -91,8 +104,8 @@ export default async function PartnerViewPage({
         <div className="space-y-8">
           {overdue.length > 0 && (
             <section>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-destructive">
-                Could use a nudge
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent-foreground/80">
+                Might appreciate a check-in
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {overdue.map((p) => (
@@ -105,7 +118,7 @@ export default async function PartnerViewPage({
           {upcoming.length > 0 && (
             <section>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                In progress
+                Still holding these
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {upcoming.map((p) => (

@@ -6,6 +6,7 @@ import {
   setPartnerVisibility,
   togglePromiseShare,
   applySharesToAllPartners,
+  setShowTitles,
 } from "@/app/(app)/partners/actions";
 
 type PromiseItem = { id: string; title: string; who: string };
@@ -16,15 +17,18 @@ export function ShareManager({
   initialVisibility,
   promises,
   initialShared,
+  initialShowTitles,
 }: {
   partnerId: string;
   initialVisibility: Visibility;
   promises: PromiseItem[];
   initialShared: string[];
+  initialShowTitles: boolean;
 }) {
   const router = useRouter();
   const [visibility, setVisibility] = useState<Visibility>(initialVisibility);
   const [shared, setShared] = useState<Set<string>>(new Set(initialShared));
+  const [showTitles, setShowTitlesState] = useState(initialShowTitles);
   const [busy, setBusy] = useState(false);
   const [applied, setApplied] = useState(false);
 
@@ -33,6 +37,12 @@ export function ShareManager({
     setBusy(true);
     await setPartnerVisibility({ id: partnerId, visibility: v });
     setBusy(false);
+    router.refresh();
+  }
+
+  async function toggleShowTitles(value: boolean) {
+    setShowTitlesState(value);
+    await setShowTitles({ id: partnerId, showTitles: value });
     router.refresh();
   }
 
@@ -80,6 +90,35 @@ export function ShareManager({
               <span className="font-medium text-foreground">{label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              What they see
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {showTitles
+                ? "They see what each promise is actually about."
+                : "They only see that something is due — not what it is."}
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={showTitles}
+            onClick={() => toggleShowTitles(!showTitles)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition ${
+              showTitles ? "bg-primary" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`absolute top-1 h-4 w-4 rounded-full bg-card shadow transition ${
+                showTitles ? "left-6" : "left-1"
+              }`}
+            />
+          </button>
         </div>
       </div>
 

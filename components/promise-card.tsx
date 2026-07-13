@@ -246,6 +246,7 @@ export function PromiseCard({
           {mode === "release" && (
             <ReleaseFlow
               busy={busy}
+              faithMode={faithMode}
               onRelease={async (reason) => {
                 setBusy(true);
                 await releasePromise(promise.id, reason);
@@ -397,6 +398,7 @@ function CompleteFlow({
       <ContinuationStep
         who={who}
         busy={busy}
+        faithMode={faithMode}
         onChoose={(keepGoing) => {
           if (keepGoing) {
             hasFollowUp ? setStep("followup") : finish(false);
@@ -470,12 +472,16 @@ function RecommitFlow({
 
 function ReleaseFlow({
   busy,
+  faithMode,
   onRelease,
 }: {
   busy: boolean;
+  faithMode: boolean;
   onRelease: (reason?: string) => void;
 }) {
-  return <MissedPromiseStep busy={busy} onRelease={onRelease} />;
+  return (
+    <MissedPromiseStep busy={busy} faithMode={faithMode} onRelease={onRelease} />
+  );
 }
 
 function CheckInFlow({

@@ -3,10 +3,12 @@
 export function ContinuationStep({
   who,
   busy,
+  faithMode = false,
   onChoose,
 }: {
   who: string;
   busy: boolean;
+  faithMode?: boolean;
   onChoose: (keepGoing: boolean) => void;
 }) {
   return (
@@ -15,8 +17,9 @@ export function ContinuationStep({
         Is this promise still going, or is it complete?
       </h2>
       <p className="mt-2 text-muted-foreground">
-        One act of care doesn't have to be the last. You decide when the
-        story with {who} on this one is finished.
+        {faithMode
+          ? `Formation takes time. You decide when this one with ${who} has done its work — not a schedule, and not a sense of finally earning something.`
+          : `One act of care doesn't have to be the last. You decide when the story with ${who} on this one is finished.`}
       </p>
       <div className="mt-5 space-y-2">
         <button

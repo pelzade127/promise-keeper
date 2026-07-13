@@ -60,7 +60,7 @@ function SelfSection({
   return (
     <section className="mt-14 border-t border-border pt-8">
       <h2 className="mb-1 text-sm font-medium text-muted-foreground">
-        Also for yourself
+        For yourself, too
       </h2>
       <p className="mb-4 text-xs text-muted-foreground/70">
         The dashboard above is about the people in your life. This is just
