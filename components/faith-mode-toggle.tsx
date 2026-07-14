@@ -2,21 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setFaithMode } from "@/app/(app)/settings/actions";
+import { setFaithMode, getFaithMode } from "@/app/(app)/settings/actions";
 
 export function FaithModeToggle({ initial }: { initial: boolean }) {
   const router = useRouter();
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
 
-  // Re-sync whenever the server's real value changes underneath us — e.g.
-  // after router.refresh() re-renders this page with fresh data, or after
-  // navigating away and back to a cached view of the page. Without this, the
-  // switch's local state can drift from the truth: it looks "stuck," and
-  // clicking it just re-sends the same value instead of actually flipping it.
+  // The page this switch lives on can be served from Next's client-side
+  // Router Cache — a stale snapshot from before a change, even though the
+  // database is already correct (this is why other faith-mode features, like
+  // the dashboard verse, always show the right thing: they're read fresh on
+  // their own page load, just not necessarily THIS page on a cached
+  // revisit). A Server Action call is a real network round-trip, not a page
+  // navigation, so it isn't subject to that cache — calling one on mount
+  // double-checks the switch against the actual truth every time.
   useEffect(() => {
-    setOn(initial);
-  }, [initial]);
+    let cancelled = false;
+    getFaithMode().then((res) => {
+      if (!cancelled) setOn(res.faithMode);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function toggle() {
     const next = !on;

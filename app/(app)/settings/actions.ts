@@ -5,6 +5,22 @@ import { createClient } from "@/lib/supabase/server";
 import { hashAnswer, verifyAnswer } from "@/lib/security-question";
 import type { ActionResult } from "@/types/database";
 
+export async function getFaithMode(): Promise<{ faithMode: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { faithMode: false };
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("faith_mode")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return { faithMode: Boolean(profile?.faith_mode) };
+}
+
 export async function setFaithMode(enabled: boolean): Promise<ActionResult> {
   const supabase = await createClient();
   const {
