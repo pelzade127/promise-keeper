@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
+import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,7 @@ export default async function JourneyPage() {
     { data: people },
     { data: groups },
     { data: answered },
+    { data: milestones },
   ] = await Promise.all([
     supabase
       .from("promise_events")
@@ -73,6 +75,10 @@ export default async function JourneyPage() {
       .from("promises")
       .select("id")
       .not("answered_at", "is", null),
+    supabase
+      .from("milestones")
+      .select("id, person_id, group_id, milestone_type, title, note, occurred_on")
+      .order("occurred_on", { ascending: false }),
   ]);
 
   const completed = (events ?? []) as Record<string, unknown>[];
@@ -113,20 +119,51 @@ export default async function JourneyPage() {
     .map(([id, count]) => ({ name: peopleName.get(id) ?? "Someone", count }));
 
   const answeredCount = (answered ?? []).length;
+  const milestoneList = (milestones ?? []) as Record<string, unknown>[];
 
-  const whoOfEvent = (e: Record<string, unknown>): string => {
-    const pid = e.person_id as string | null;
-    const gid = e.group_id as string | null;
-    if (pid) return peopleName.get(pid) ?? "Someone";
-    if (gid) return groupName.get(gid) ?? "A group";
+  const whoOf = (personId: string | null, groupId: string | null): string => {
+    if (personId) return peopleName.get(personId) ?? "Someone";
+    if (groupId) return groupName.get(groupId) ?? "A group";
     return "Yourself";
   };
+
+  const whoOfEvent = (e: Record<string, unknown>): string =>
+    whoOf(e.person_id as string | null, e.group_id as string | null);
+
+  // Memory Lane weaves kept-promise events and deliberately marked milestones
+  // into one real, data-built feed — never AI-generated, always something
+  // that actually happened.
+  type LaneItem = {
+    id: string;
+    at: string;
+    kind: "event" | "milestone";
+    text: string;
+    body?: string | null;
+  };
+
+  const lane: LaneItem[] = [
+    ...completed.map((e) => ({
+      id: `e_${e.id}`,
+      at: e.created_at as string,
+      kind: "event" as const,
+      text: `${e.event_type === "care_occurrence" ? "You showed up for" : "You kept your word to"} ${whoOfEvent(e)}${(e.note as string | null) ? ` — ${e.note as string}` : ""}`,
+      body: (e.reflection as string | null) || null,
+    })),
+    ...milestoneList.map((m) => ({
+      id: `m_${m.id}`,
+      at: m.occurred_on as string,
+      kind: "milestone" as const,
+      text: `${MILESTONE_LABEL[m.milestone_type as keyof typeof MILESTONE_LABEL]} — ${whoOf(m.person_id as string | null, m.group_id as string | null)}`,
+      body: [m.title, m.note].filter(Boolean).join(" — ") || null,
+    })),
+  ].sort((a, b) => (a.at < b.at ? 1 : -1));
 
   const stats: { label: string; value: number }[] = [
     { label: "Acts of faithfulness", value: keptCount },
     { label: "Kept in the last 30 days", value: keptLast30 },
     { label: "People shown up for", value: peopleSet.size },
     { label: "Groups cared for", value: groupSet.size },
+    { label: "Milestones marked", value: milestoneList.length },
   ];
   if (faithMode) {
     stats.push({ label: "Answered prayers", value: answeredCount });
@@ -143,7 +180,7 @@ export default async function JourneyPage() {
         </p>
       </header>
 
-      {keptCount === 0 ? (
+      {keptCount === 0 && milestoneList.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border bg-card/60 p-10 text-center text-muted-foreground">
           Your story is just beginning. Keep your first promise and it'll appear
           here.{" "}
@@ -211,23 +248,30 @@ export default async function JourneyPage() {
               Memory lane
             </h2>
             <ol className="relative space-y-5 border-l border-border pl-6">
-              {completed.slice(0, 50).map((e) => (
-                <li key={e.id as string} className="relative">
-                  <span className="absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+              {lane.slice(0, 60).map((item) => (
+                <li key={item.id} className="relative">
+                  <span
+                    className={
+                      item.kind === "milestone"
+                        ? "absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-accent bg-card"
+                        : "absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full bg-primary"
+                    }
+                  />
                   <p className="text-foreground">
-                    {e.event_type === "care_occurrence"
-                      ? "You showed up for"
-                      : "You kept your word to"}{" "}
-                    <span className="font-medium">{whoOfEvent(e)}</span>
-                    {(e.note as string | null) ? ` — ${e.note as string}` : ""}
+                    {item.kind === "milestone" && (
+                      <span className="mr-1.5 text-sm text-accent-foreground/80">
+                        Milestone ·
+                      </span>
+                    )}
+                    {item.text}
                   </p>
-                  {(e.reflection as string | null) && (
+                  {item.body && (
                     <p className="mt-0.5 text-sm italic text-muted-foreground">
-                      “{e.reflection as string}”
+                      “{item.body}”
                     </p>
                   )}
                   <p className="mt-0.5 text-xs text-muted-foreground/70">
-                    {formatDate(e.created_at as string)}
+                    {formatDate(item.at)}
                   </p>
                 </li>
               ))}

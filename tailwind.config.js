@@ -22,6 +22,7 @@ module.exports = {
     "bg-muted/40",
     "bg-primary",
     "bg-secondary",
+    "border-accent",
     "border-accent/20",
     "border-accent/30",
     "border-accent/40",

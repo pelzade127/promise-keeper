@@ -43,6 +43,28 @@ export type PromiseEventType =
   | "created" | "completed" | "evolved" | "recommitted" | "released"
   | "missed" | "follow_up_completed" | "journal_added" | "memorialized"
   | "care_occurrence";
+
+export type MilestoneType =
+  | "answered_prayer"
+  | "need_resolved"
+  | "relationship_restored"
+  | "major_life_event"
+  | "grief_anniversary"
+  | "meaningful_moment"
+  | "promise_evolved";
+
+export type Milestone = {
+  id: string;
+  user_id: string;
+  person_id: string | null;
+  group_id: string | null;
+  promise_id: string | null;
+  milestone_type: MilestoneType;
+  title: string;
+  note: string | null;
+  occurred_on: string;
+  created_at: string;
+}
 export type MissedReason =
   | "forgot" | "got_busy" | "avoided" | "circumstances_changed" | "no_longer_relevant";
 

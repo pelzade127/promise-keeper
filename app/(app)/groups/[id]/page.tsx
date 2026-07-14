@@ -5,12 +5,14 @@ import { AppNav } from "@/components/app-nav";
 import { JournalComposer } from "@/components/journal-composer";
 import { MemberManager, EditableGroupHeader } from "@/components/groups-ui";
 import { VerseAttach } from "@/components/verse-attach";
+import { MilestoneComposer } from "@/components/milestone-composer";
+import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
 
 type TimelineItem = {
   id: string;
-  kind: "event" | "journal";
+  kind: "event" | "journal" | "milestone";
   at: string;
   label: string;
   body?: string | null;
@@ -87,6 +89,7 @@ export default async function GroupPage({
     { data: promises },
     { data: journal },
     { data: events },
+    { data: milestones },
   ] = await Promise.all([
     supabase
       .from("group_members")
@@ -112,6 +115,11 @@ export default async function GroupPage({
       .select("id, event_type, note, reflection, missed_reason, created_at")
       .eq("group_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("milestones")
+      .select("id, milestone_type, title, note, occurred_on")
+      .eq("group_id", id)
+      .order("occurred_on", { ascending: false }),
   ]);
 
   const members = ((memberRows ?? []) as unknown[]).map((row) => {
@@ -160,6 +168,13 @@ export default async function GroupPage({
       at: j.created_at,
       label: JOURNAL_LABEL[j.entry_type] ?? "Note",
       body: j.content,
+    })),
+    ...(milestones ?? []).map((m) => ({
+      id: `m_${m.id}`,
+      kind: "milestone" as const,
+      at: m.occurred_on as string,
+      label: MILESTONE_LABEL[m.milestone_type as keyof typeof MILESTONE_LABEL],
+      body: [m.title, m.note].filter(Boolean).join(" — "),
     })),
   ].sort((a, b) => (a.at < b.at ? 1 : -1));
 
@@ -228,11 +243,20 @@ export default async function GroupPage({
                 {timeline.map((item) => (
                   <li key={item.id} className="relative">
                     <span
-                      className={`absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full ${
-                        item.kind === "journal" ? "bg-accent" : "bg-primary"
-                      }`}
+                      className={
+                        item.kind === "milestone"
+                          ? "absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-accent bg-card"
+                          : `absolute -left-[1.6rem] top-1.5 h-2.5 w-2.5 rounded-full ${
+                              item.kind === "journal" ? "bg-accent" : "bg-primary"
+                            }`
+                      }
                     />
                     <p className="text-sm font-medium text-foreground">
+                      {item.kind === "milestone" && (
+                        <span className="mr-1.5 text-accent-foreground/80">
+                          Milestone ·
+                        </span>
+                      )}
                       {item.label}
                     </p>
                     {item.body && (
@@ -257,6 +281,7 @@ export default async function GroupPage({
             candidates={candidates}
           />
           {faithMode && <VerseAttach groupId={group.id} name={group.name} />}
+          <MilestoneComposer groupId={group.id} name={group.name} />
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Add to the journal
