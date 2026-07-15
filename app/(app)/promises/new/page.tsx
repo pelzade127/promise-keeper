@@ -17,7 +17,7 @@ export default async function NewPromisePage({
 
   const { person: personId, group: groupId } = await searchParams;
 
-  const [{ data: people }, { data: groups }, { data: categories }] =
+  const [{ data: people }, { data: groups }, { data: categories }, { data: needRows }] =
     await Promise.all([
       supabase
         .from("people")
@@ -33,7 +33,18 @@ export default async function NewPromisePage({
         .from("categories")
         .select("id, name, color")
         .order("name", { ascending: true }),
+      supabase
+        .from("needs")
+        .select("id, title, person_id")
+        .eq("status", "active")
+        .order("created_at", { ascending: false }),
     ]);
+
+  const needsByPerson: Record<string, { id: string; title: string }[]> = {};
+  for (const n of needRows ?? []) {
+    const pid = n.person_id as string;
+    (needsByPerson[pid] ??= []).push({ id: n.id as string, title: n.title as string });
+  }
 
   const preselectedPerson =
     personId && people ? (people.find((p) => p.id === personId) ?? null) : null;
@@ -46,6 +57,7 @@ export default async function NewPromisePage({
         people={people ?? []}
         groups={groups ?? []}
         categories={categories ?? []}
+        needsByPerson={needsByPerson}
         preselectedPerson={preselectedPerson}
         preselectedGroup={preselectedGroup}
       />

@@ -24,6 +24,7 @@ export type PromiseDetails = {
   reminderEnabled: boolean;
   followUpType: FollowUpType;
   followUpIntervalDays?: number;
+  needId?: string;
 };
 
 /** Steps within the "complete a promise" flow (see promise-card.tsx). */

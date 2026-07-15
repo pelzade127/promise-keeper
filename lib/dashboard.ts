@@ -51,7 +51,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   const { data: promises } = await supabase
     .from("promises")
     .select(
-      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color )`,
+      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color ), need:needs ( id, title )`,
     )
     .eq("status", "active")
     .order("due_date", { ascending: true });
@@ -61,7 +61,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   const { data: followUpData } = await supabase
     .from("promises")
     .select(
-      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color )`,
+      `*, person:people ( id, name ), group:groups ( id, name ), category:categories ( id, name, color ), need:needs ( id, title )`,
     )
     .not("next_follow_up_date", "is", null)
     .lte("next_follow_up_date", today)

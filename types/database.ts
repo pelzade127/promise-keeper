@@ -18,12 +18,27 @@ export type FollowUpType = "none" | "one_time" | "recurring";
 export type ActionResult = { error?: string };
 
 /** Input for creating a promise via the person-first flow. */
+export type NeedStatus = "active" | "resolved" | "archived";
+
+export type Need = {
+  id: string;
+  user_id: string;
+  person_id: string;
+  title: string;
+  description: string | null;
+  status: NeedStatus;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreatePromiseInput {
   // Who/what the promise is for.
   target: PromiseTarget; // 'person' | 'group' | 'self'
   personId?: string; // an existing person
   newPersonName?: string; // a brand-new person to create
   groupId?: string; // an existing group
+  needId?: string; // optional — which of the person's needs this serves
 
   // The promise itself
   title: string;
@@ -140,6 +155,7 @@ export type PromiseWithRelations = Promise & {
   person: Pick<Person, "id" | "name"> | null;
   group: { id: string; name: string } | null;
   category: Pick<Category, "id" | "name" | "color"> | null;
+  need: { id: string; title: string } | null;
 }
 
 /**

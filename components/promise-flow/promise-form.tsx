@@ -13,18 +13,21 @@ import { type Category, type PromiseDetails, field, label } from "./types";
 export function PromiseForm({
   heading,
   categories,
+  availableNeeds = [],
   submitting,
   error,
   onSubmit,
 }: {
   heading: string;
   categories: Category[];
+  availableNeeds?: { id: string; title: string }[];
   submitting: boolean;
   error: string | null;
   onSubmit: (details: PromiseDetails) => void;
 }) {
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [needId, setNeedId] = useState("");
   const [why, setWhy] = useState("");
   const [promiseType, setPromiseType] = useState<PromiseType>("one_time");
   const [recurrence, setRecurrence] = useState<PromiseRecurrence>("weekly");
@@ -39,6 +42,7 @@ export function PromiseForm({
     onSubmit({
       title,
       categoryId: categoryId || undefined,
+      needId: needId || undefined,
       whyItMatters: why || undefined,
       promiseType,
       recurrence: promiseType === "recurring" ? recurrence : undefined,
@@ -81,6 +85,24 @@ export function PromiseForm({
             ))}
           </select>
         </div>
+
+        {availableNeeds.length > 0 && (
+          <div>
+            <label className={label}>Which need does this serve?</label>
+            <select
+              value={needId}
+              onChange={(e) => setNeedId(e.target.value)}
+              className={field}
+            >
+              <option value="">No specific need</option>
+              {availableNeeds.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className={label}>Why this matters (optional)</label>

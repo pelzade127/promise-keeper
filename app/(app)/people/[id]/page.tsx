@@ -7,6 +7,7 @@ import { EditablePersonHeader } from "@/components/people-ui";
 import { VerseAttach } from "@/components/verse-attach";
 import { MilestoneComposer } from "@/components/milestone-composer";
 import { DeleteMilestoneButton } from "@/components/delete-milestone-button";
+import { NeedsList } from "@/components/needs-list";
 import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
@@ -85,11 +86,11 @@ export default async function PersonPage({
     .maybeSingle();
   const faithMode = Boolean(profile?.faith_mode);
 
-  const [{ data: promises }, { data: journal }, { data: events }, { data: milestones }] =
+  const [{ data: promises }, { data: journal }, { data: events }, { data: milestones }, { data: needs }] =
     await Promise.all([
       supabase
         .from("promises")
-        .select("id, title, status, due_date, promise_type")
+        .select("id, title, status, due_date, promise_type, need:needs ( id, title )")
         .eq("person_id", id)
         .order("created_at", { ascending: false }),
       supabase
@@ -107,6 +108,11 @@ export default async function PersonPage({
         .select("id, milestone_type, title, note, occurred_on")
         .eq("person_id", id)
         .order("occurred_on", { ascending: false }),
+      supabase
+        .from("needs")
+        .select("id, title, description, status")
+        .eq("person_id", id)
+        .order("created_at", { ascending: false }),
     ]);
 
   const allPromises = promises ?? [];
@@ -183,21 +189,40 @@ export default async function PersonPage({
 
       <div className="grid gap-8 md:grid-cols-[1fr_340px]">
         <div>
+          <NeedsList
+            personId={person.id}
+            name={person.name}
+            needs={(needs ?? []) as {
+              id: string;
+              title: string;
+              description: string | null;
+              status: "active" | "resolved" | "archived";
+            }[]}
+          />
+
           {active.length > 0 && (
             <section className="mb-8">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Open promises
               </h2>
               <div className="space-y-2">
-                {active.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/promises/${p.id}/edit?from=/people/${person.id}`}
-                    className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
-                  >
-                    <span className="text-foreground">{p.title}</span>
-                  </Link>
-                ))}
+                {active.map((p) => {
+                  const needRel = Array.isArray(p.need) ? p.need[0] : p.need;
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/promises/${p.id}/edit?from=/people/${person.id}`}
+                      className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
+                    >
+                      <span className="text-foreground">{p.title}</span>
+                      {needRel && (
+                        <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                          {needRel.title}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </section>
           )}
