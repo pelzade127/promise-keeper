@@ -158,6 +158,13 @@ export default async function JourneyPage() {
     })),
   ].sort((a, b) => (a.at < b.at ? 1 : -1));
 
+  const yearsWithData = Array.from(
+    new Set([
+      ...completed.map((e) => Number((e.created_at as string).slice(0, 4))),
+      ...milestoneList.map((m) => Number((m.occurred_on as string).slice(0, 4))),
+    ]),
+  ).sort((a, b) => b - a);
+
   const stats: { label: string; value: number }[] = [
     { label: "Acts of faithfulness", value: keptCount },
     { label: "Kept in the last 30 days", value: keptLast30 },
@@ -179,6 +186,23 @@ export default async function JourneyPage() {
           A record of the times you kept your word.
         </p>
       </header>
+
+      {yearsWithData.length > 0 && (
+        <div className="mb-8 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Yearly reflections:
+          </span>
+          {yearsWithData.map((y) => (
+            <Link
+              key={y}
+              href={`/journey/${y}`}
+              className="rounded-full border border-border px-3 py-1 text-sm text-foreground transition hover:border-primary"
+            >
+              {y}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {keptCount === 0 && milestoneList.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border bg-card/60 p-10 text-center text-muted-foreground">

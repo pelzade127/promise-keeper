@@ -6,6 +6,7 @@ import { JournalComposer } from "@/components/journal-composer";
 import { MemberManager, EditableGroupHeader } from "@/components/groups-ui";
 import { VerseAttach } from "@/components/verse-attach";
 import { MilestoneComposer } from "@/components/milestone-composer";
+import { DeleteMilestoneButton } from "@/components/delete-milestone-button";
 import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ type TimelineItem = {
   at: string;
   label: string;
   body?: string | null;
+  rawId?: string;
 };
 
 const EVENT_LABEL: Record<string, string> = {
@@ -175,6 +177,7 @@ export default async function GroupPage({
       at: m.occurred_on as string,
       label: MILESTONE_LABEL[m.milestone_type as keyof typeof MILESTONE_LABEL],
       body: [m.title, m.note].filter(Boolean).join(" — "),
+      rawId: m.id as string,
     })),
   ].sort((a, b) => (a.at < b.at ? 1 : -1));
 
@@ -264,9 +267,17 @@ export default async function GroupPage({
                         {item.body}
                       </p>
                     )}
-                    <p className="mt-0.5 text-xs text-muted-foreground/70">
-                      {formatDate(item.at)}
-                    </p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground/70">
+                        {formatDate(item.at)}
+                      </p>
+                      {item.kind === "milestone" && item.rawId && (
+                        <DeleteMilestoneButton
+                          id={item.rawId}
+                          groupId={group.id}
+                        />
+                      )}
+                    </div>
                   </li>
                 ))}
               </ol>
