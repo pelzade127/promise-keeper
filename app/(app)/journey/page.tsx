@@ -5,35 +5,6 @@ import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
 
-function weekStart(d: Date): string {
-  const day = (d.getDay() + 6) % 7; // Monday = 0
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - day);
-  return monday.toISOString().slice(0, 10);
-}
-
-function currentWeeklyStreak(isoDates: string[]): number {
-  const weeks = new Set(isoDates.map((s) => weekStart(new Date(s))));
-  let streak = 0;
-  const cursor = new Date();
-  // Walk back week by week while each week has at least one kept promise.
-  // Allow the streak to "still count" if this week is empty but last week isn't.
-  let allowSkipThisWeek = !weeks.has(weekStart(cursor));
-  while (true) {
-    const ws = weekStart(cursor);
-    if (weeks.has(ws)) {
-      streak++;
-      allowSkipThisWeek = false;
-    } else if (allowSkipThisWeek) {
-      allowSkipThisWeek = false;
-    } else {
-      break;
-    }
-    cursor.setDate(cursor.getDate() - 7);
-  }
-  return streak;
-}
-
 function formatDate(at: string): string {
   return new Date(at).toLocaleDateString(undefined, {
     month: "short",
@@ -108,10 +79,6 @@ export default async function JourneyPage() {
     }
     if (gid) groupSet.add(gid);
   }
-
-  const streak = currentWeeklyStreak(
-    completed.map((e) => e.created_at as string),
-  );
 
   const topPeople = [...perPerson.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -217,17 +184,6 @@ export default async function JourneyPage() {
         </p>
       ) : (
         <div className="space-y-10">
-          {streak > 0 && (
-            <div className="rounded-lg border border-accent/30 bg-accent/10 px-5 py-4">
-              <p className="font-display text-2xl text-foreground">
-                {streak} week{streak === 1 ? "" : "s"} of faithfulness
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Weeks in a row you've kept at least one promise. Keep it going.
-              </p>
-            </div>
-          )}
-
           <section>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {stats.map((s) => (
