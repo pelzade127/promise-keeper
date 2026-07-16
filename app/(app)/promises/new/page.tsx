@@ -35,15 +35,23 @@ export default async function NewPromisePage({
         .order("name", { ascending: true }),
       supabase
         .from("needs")
-        .select("id, title, person_id")
+        .select("id, title, person_id, group_id")
         .eq("status", "active")
         .order("created_at", { ascending: false }),
     ]);
 
   const needsByPerson: Record<string, { id: string; title: string }[]> = {};
+  const needsByGroup: Record<string, { id: string; title: string }[]> = {};
   for (const n of needRows ?? []) {
-    const pid = n.person_id as string;
-    (needsByPerson[pid] ??= []).push({ id: n.id as string, title: n.title as string });
+    const title = n.title as string;
+    const id = n.id as string;
+    if (n.person_id) {
+      const pid = n.person_id as string;
+      (needsByPerson[pid] ??= []).push({ id, title });
+    } else if (n.group_id) {
+      const gid = n.group_id as string;
+      (needsByGroup[gid] ??= []).push({ id, title });
+    }
   }
 
   const preselectedPerson =
@@ -58,6 +66,7 @@ export default async function NewPromisePage({
         groups={groups ?? []}
         categories={categories ?? []}
         needsByPerson={needsByPerson}
+        needsByGroup={needsByGroup}
         preselectedPerson={preselectedPerson}
         preselectedGroup={preselectedGroup}
       />

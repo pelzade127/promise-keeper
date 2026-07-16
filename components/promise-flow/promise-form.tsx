@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PromiseType, PromiseRecurrence, FollowUpType } from "@/types/database";
+import { createNeed } from "@/app/(app)/needs/actions";
 import { type Category, type PromiseDetails, field, label } from "./types";
 
 /**
@@ -13,7 +14,9 @@ import { type Category, type PromiseDetails, field, label } from "./types";
 export function PromiseForm({
   heading,
   categories,
-  availableNeeds = [],
+  availableNeeds: initialNeeds = [],
+  personId,
+  groupId,
   submitting,
   error,
   onSubmit,
@@ -21,6 +24,8 @@ export function PromiseForm({
   heading: string;
   categories: Category[];
   availableNeeds?: { id: string; title: string }[];
+  personId?: string;
+  groupId?: string;
   submitting: boolean;
   error: string | null;
   onSubmit: (details: PromiseDetails) => void;
@@ -28,6 +33,11 @@ export function PromiseForm({
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [needId, setNeedId] = useState("");
+  const [needs, setNeeds] = useState(initialNeeds);
+  const [addingNeed, setAddingNeed] = useState(false);
+  const [newNeedTitle, setNewNeedTitle] = useState("");
+  const [needBusy, setNeedBusy] = useState(false);
+  const [needError, setNeedError] = useState<string | null>(null);
   const [why, setWhy] = useState("");
   const [promiseType, setPromiseType] = useState<PromiseType>("one_time");
   const [recurrence, setRecurrence] = useState<PromiseRecurrence>("weekly");
@@ -37,6 +47,26 @@ export function PromiseForm({
   const [followUpDays, setFollowUpDays] = useState("");
 
   const isOpenEnded = promiseType === "open_ended_care";
+
+  async function addNeedInline() {
+    setNeedError(null);
+    if (!newNeedTitle.trim()) {
+      setNeedError("Give this need a title.");
+      return;
+    }
+    setNeedBusy(true);
+    const res = await createNeed({ personId, groupId, title: newNeedTitle });
+    setNeedBusy(false);
+    if (res?.error || !res.id) {
+      setNeedError(res.error ?? "Couldn't create that need.");
+      return;
+    }
+    const created = { id: res.id, title: newNeedTitle.trim() };
+    setNeeds((prev) => [...prev, created]);
+    setNeedId(created.id);
+    setNewNeedTitle("");
+    setAddingNeed(false);
+  }
 
   function submit() {
     onSubmit({
@@ -86,21 +116,63 @@ export function PromiseForm({
           </select>
         </div>
 
-        {availableNeeds.length > 0 && (
+        {(personId || groupId) && (
           <div>
             <label className={label}>Which need does this serve?</label>
-            <select
-              value={needId}
-              onChange={(e) => setNeedId(e.target.value)}
-              className={field}
-            >
-              <option value="">No specific need</option>
-              {availableNeeds.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.title}
-                </option>
-              ))}
-            </select>
+            {!addingNeed ? (
+              <>
+                <select
+                  value={needId}
+                  onChange={(e) => setNeedId(e.target.value)}
+                  className={field}
+                >
+                  <option value="">No specific need</option>
+                  {needs.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setAddingNeed(true)}
+                  className="mt-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  + Add a new need
+                </button>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  autoFocus
+                  value={newNeedTitle}
+                  onChange={(e) => setNewNeedTitle(e.target.value)}
+                  placeholder="e.g. Employment, Housing, Grief"
+                  className={field}
+                />
+                {needError && (
+                  <p className="text-sm text-destructive">{needError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={addNeedInline}
+                    disabled={needBusy}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {needBusy ? "Adding…" : "Add"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAddingNeed(false);
+                      setNewNeedTitle("");
+                      setNeedError(null);
+                    }}
+                    className="text-sm text-muted-foreground transition hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

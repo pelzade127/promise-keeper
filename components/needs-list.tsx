@@ -16,18 +16,24 @@ type NeedRow = {
 function NeedActions({
   need,
   personId,
+  groupId,
 }: {
   need: NeedRow;
-  personId: string;
+  personId?: string;
+  groupId?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function run(
-    action: (input: { id: string; personId: string }) => Promise<unknown>,
+    action: (input: {
+      id: string;
+      personId?: string;
+      groupId?: string;
+    }) => Promise<unknown>,
   ) {
     setBusy(true);
-    await action({ id: need.id, personId });
+    await action({ id: need.id, personId, groupId });
     setBusy(false);
     router.refresh();
   }
@@ -57,10 +63,12 @@ function NeedActions({
 
 export function NeedsList({
   personId,
+  groupId,
   name,
   needs,
 }: {
-  personId: string;
+  personId?: string;
+  groupId?: string;
   name: string;
   needs: NeedRow[];
 }) {
@@ -68,6 +76,7 @@ export function NeedsList({
   const active = needs.filter((n) => n.status === "active");
   const resolved = needs.filter((n) => n.status === "resolved");
   const archived = needs.filter((n) => n.status === "archived");
+  const basePath = personId ? `/people/${personId}` : `/groups/${groupId}`;
 
   return (
     <section className="mb-8">
@@ -75,7 +84,7 @@ export function NeedsList({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Needs
         </h2>
-        <NeedComposer personId={personId} name={name} />
+        <NeedComposer personId={personId} groupId={groupId} name={name} />
       </div>
 
       {active.length === 0 ? (
@@ -90,12 +99,12 @@ export function NeedsList({
               className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3"
             >
               <Link
-                href={`/people/${personId}/needs/${n.id}`}
+                href={`${basePath}/needs/${n.id}`}
                 className="text-foreground underline-offset-4 hover:text-primary hover:underline"
               >
                 {n.title}
               </Link>
-              <NeedActions need={n} personId={personId} />
+              <NeedActions need={n} personId={personId} groupId={groupId} />
             </div>
           ))}
         </div>
@@ -117,12 +126,12 @@ export function NeedsList({
                   className="flex items-center justify-between rounded-lg border border-border bg-card/60 px-4 py-3"
                 >
                   <Link
-                    href={`/people/${personId}/needs/${n.id}`}
+                    href={`${basePath}/needs/${n.id}`}
                     className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   >
                     ✓ {n.title}
                   </Link>
-                  <NeedActions need={n} personId={personId} />
+                  <NeedActions need={n} personId={personId} groupId={groupId} />
                 </div>
               ))}
             </div>

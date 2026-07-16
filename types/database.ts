@@ -23,7 +23,8 @@ export type NeedStatus = "active" | "resolved" | "archived";
 export type Need = {
   id: string;
   user_id: string;
-  person_id: string;
+  person_id: string | null;
+  group_id: string | null;
   title: string;
   description: string | null;
   status: NeedStatus;

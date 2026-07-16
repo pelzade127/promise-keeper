@@ -7,6 +7,7 @@ import {
   resolveNeed,
   archiveNeed,
   reopenNeed,
+  deleteNeed,
 } from "@/app/(app)/needs/actions";
 import type { NeedStatus } from "@/types/database";
 
@@ -22,18 +23,23 @@ const STATUS_LABEL: Record<NeedStatus, string> = {
 export function NeedHeader({
   needId,
   personId,
+  groupId,
   initialTitle,
   initialDescription,
   status,
+  returnTo,
 }: {
   needId: string;
-  personId: string;
+  personId?: string;
+  groupId?: string;
   initialTitle: string;
   initialDescription: string | null;
   status: NeedStatus;
+  returnTo: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [busy, setBusy] = useState(false);
@@ -46,7 +52,7 @@ export function NeedHeader({
       return;
     }
     setBusy(true);
-    const res = await updateNeed({ id: needId, personId, title, description });
+    const res = await updateNeed({ id: needId, personId, groupId, title, description });
     setBusy(false);
     if (res?.error) {
       setError(res.error);
@@ -58,8 +64,15 @@ export function NeedHeader({
 
   async function changeStatus(action: typeof resolveNeed) {
     setBusy(true);
-    await action({ id: needId, personId });
+    await action({ id: needId, personId, groupId });
     setBusy(false);
+    router.refresh();
+  }
+
+  async function confirmDelete() {
+    setBusy(true);
+    await deleteNeed({ id: needId, personId, groupId });
+    router.push(returnTo);
     router.refresh();
   }
 
@@ -119,7 +132,7 @@ export function NeedHeader({
       {initialDescription && (
         <p className="mt-1 text-muted-foreground">{initialDescription}</p>
       )}
-      <div className="mt-3 flex gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         {status === "active" ? (
           <>
             <button
@@ -144,6 +157,32 @@ export function NeedHeader({
             className="text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
           >
             Reopen this need
+          </button>
+        )}
+
+        {confirmingDelete ? (
+          <span className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Delete this need for good?</span>
+            <button
+              disabled={busy}
+              onClick={confirmDelete}
+              className="font-medium text-destructive underline-offset-4 hover:underline disabled:opacity-50"
+            >
+              {busy ? "Deleting…" : "Yes, delete"}
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Cancel
+            </button>
+          </span>
+        ) : (
+          <button
+            onClick={() => setConfirmingDelete(true)}
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-destructive hover:underline"
+          >
+            Delete
           </button>
         )}
       </div>

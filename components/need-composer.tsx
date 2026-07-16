@@ -9,9 +9,11 @@ const field =
 
 export function NeedComposer({
   personId,
+  groupId,
   name,
 }: {
-  personId: string;
+  personId?: string;
+  groupId?: string;
   name: string;
 }) {
   const router = useRouter();
@@ -28,7 +30,7 @@ export function NeedComposer({
       return;
     }
     setSaving(true);
-    const res = await createNeed({ personId, title, description });
+    const res = await createNeed({ personId, groupId, title, description });
     setSaving(false);
     if (res?.error) {
       setError(res.error);

@@ -72,7 +72,7 @@ export async function createPromise(
     target_type: target,
     person_id: personId,
     group_id: groupId,
-    need_id: target === "person" ? input.needId || null : null,
+    need_id: target !== "self" ? input.needId || null : null,
     promise_type: input.promiseType,
     status: "active",
     recurrence:

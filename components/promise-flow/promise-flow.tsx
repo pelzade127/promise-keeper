@@ -19,6 +19,7 @@ export function PromiseFlow({
   groups,
   categories,
   needsByPerson = {},
+  needsByGroup = {},
   preselectedPerson = null,
   preselectedGroup = null,
 }: {
@@ -26,6 +27,7 @@ export function PromiseFlow({
   groups: Group[];
   categories: Category[];
   needsByPerson?: Record<string, { id: string; title: string }[]>;
+  needsByGroup?: Record<string, { id: string; title: string }[]>;
   preselectedPerson?: Person | null;
   preselectedGroup?: Group | null;
 }) {
@@ -312,10 +314,14 @@ export function PromiseFlow({
         <PromiseForm
           heading={heading}
           categories={categories}
+          personId={target === "person" ? chosenPerson?.id : undefined}
+          groupId={target === "group" ? chosenGroup?.id : undefined}
           availableNeeds={
             target === "person" && chosenPerson
               ? (needsByPerson[chosenPerson.id] ?? [])
-              : []
+              : target === "group" && chosenGroup
+                ? (needsByGroup[chosenGroup.id] ?? [])
+                : []
           }
           submitting={submitting}
           error={error}

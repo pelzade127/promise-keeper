@@ -44,12 +44,12 @@ function formatDate(at: string): string {
   });
 }
 
-export default async function NeedPage({
+export default async function GroupNeedPage({
   params,
 }: {
   params: Promise<{ id: string; needId: string }>;
 }) {
-  const { id: personId, needId } = await params;
+  const { id: groupId, needId } = await params;
   const supabase = await createClient();
 
   const {
@@ -57,17 +57,17 @@ export default async function NeedPage({
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: person }, { data: need }] = await Promise.all([
-    supabase.from("people").select("id, name").eq("id", personId).maybeSingle(),
+  const [{ data: group }, { data: need }] = await Promise.all([
+    supabase.from("groups").select("id, name").eq("id", groupId).maybeSingle(),
     supabase
       .from("needs")
       .select("id, title, description, status")
       .eq("id", needId)
-      .eq("person_id", personId)
+      .eq("group_id", groupId)
       .maybeSingle(),
   ]);
 
-  if (!person || !need) notFound();
+  if (!group || !need) notFound();
 
   const { data: needPromiseRows } = await supabase
     .from("promises")
@@ -134,20 +134,20 @@ export default async function NeedPage({
       <AppNav />
 
       <Link
-        href={`/people/${person.id}`}
+        href={`/groups/${group.id}`}
         className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
       >
-        ← {person.name}
+        ← {group.name}
       </Link>
 
       <header className="mt-4 mb-8">
         <NeedHeader
           needId={need.id}
-          personId={person.id}
+          groupId={group.id}
           initialTitle={need.title}
           initialDescription={need.description}
           status={need.status}
-          returnTo={`/people/${person.id}`}
+          returnTo={`/groups/${group.id}`}
         />
       </header>
 
@@ -211,7 +211,7 @@ export default async function NeedPage({
               {active.map((p) => (
                 <Link
                   key={p.id}
-                  href={`/promises/${p.id}/edit?from=/people/${person.id}/needs/${need.id}`}
+                  href={`/promises/${p.id}/edit?from=/groups/${group.id}/needs/${need.id}`}
                   className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
                 >
                   <span className="text-foreground">{p.title}</span>

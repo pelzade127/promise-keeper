@@ -4,13 +4,29 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/types/database";
 
-export async function createNeed(input: {
-  personId: string;
-  title: string;
-  description?: string;
-}): Promise<ActionResult & { id?: string }> {
+type Owner = { personId?: string; groupId?: string };
+
+function ownerPaths(o: Owner, needId?: string): string[] {
+  const paths: string[] = [];
+  if (o.personId) {
+    paths.push(`/people/${o.personId}`);
+    if (needId) paths.push(`/people/${o.personId}/needs/${needId}`);
+  }
+  if (o.groupId) {
+    paths.push(`/groups/${o.groupId}`);
+    if (needId) paths.push(`/groups/${o.groupId}/needs/${needId}`);
+  }
+  return paths;
+}
+
+export async function createNeed(
+  input: Owner & { title: string; description?: string },
+): Promise<ActionResult & { id?: string }> {
   const title = input.title.trim();
   if (!title) return { error: "Give this need a title." };
+  if (!input.personId && !input.groupId) {
+    return { error: "Missing who this need is about." };
+  }
 
   const supabase = await createClient();
   const {
@@ -22,7 +38,8 @@ export async function createNeed(input: {
     .from("needs")
     .insert({
       user_id: user.id,
-      person_id: input.personId,
+      person_id: input.personId ?? null,
+      group_id: input.groupId ?? null,
       title,
       description: input.description?.trim() || null,
     })
@@ -30,16 +47,13 @@ export async function createNeed(input: {
     .single();
   if (error || !data) return { error: "Couldn't create that need." };
 
-  revalidatePath(`/people/${input.personId}`);
+  for (const p of ownerPaths(input)) revalidatePath(p);
   return { id: data.id as string };
 }
 
-export async function updateNeed(input: {
-  id: string;
-  personId: string;
-  title: string;
-  description?: string;
-}): Promise<ActionResult> {
+export async function updateNeed(
+  input: Owner & { id: string; title: string; description?: string },
+): Promise<ActionResult> {
   const title = input.title.trim();
   if (!title) return { error: "Give this need a title." };
 
@@ -56,15 +70,13 @@ export async function updateNeed(input: {
     .eq("user_id", user.id);
   if (error) return { error: "Couldn't save that." };
 
-  revalidatePath(`/people/${input.personId}`);
-  revalidatePath(`/people/${input.personId}/needs/${input.id}`);
+  for (const p of ownerPaths(input, input.id)) revalidatePath(p);
   return {};
 }
 
-export async function resolveNeed(input: {
-  id: string;
-  personId: string;
-}): Promise<ActionResult> {
+export async function resolveNeed(
+  input: Owner & { id: string },
+): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -78,15 +90,13 @@ export async function resolveNeed(input: {
     .eq("user_id", user.id);
   if (error) return { error: "Couldn't update that." };
 
-  revalidatePath(`/people/${input.personId}`);
-  revalidatePath(`/people/${input.personId}/needs/${input.id}`);
+  for (const p of ownerPaths(input, input.id)) revalidatePath(p);
   return {};
 }
 
-export async function archiveNeed(input: {
-  id: string;
-  personId: string;
-}): Promise<ActionResult> {
+export async function archiveNeed(
+  input: Owner & { id: string },
+): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -100,15 +110,13 @@ export async function archiveNeed(input: {
     .eq("user_id", user.id);
   if (error) return { error: "Couldn't update that." };
 
-  revalidatePath(`/people/${input.personId}`);
-  revalidatePath(`/people/${input.personId}/needs/${input.id}`);
+  for (const p of ownerPaths(input, input.id)) revalidatePath(p);
   return {};
 }
 
-export async function reopenNeed(input: {
-  id: string;
-  personId: string;
-}): Promise<ActionResult> {
+export async function reopenNeed(
+  input: Owner & { id: string },
+): Promise<ActionResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -122,7 +130,32 @@ export async function reopenNeed(input: {
     .eq("user_id", user.id);
   if (error) return { error: "Couldn't update that." };
 
-  revalidatePath(`/people/${input.personId}`);
-  revalidatePath(`/people/${input.personId}/needs/${input.id}`);
+  for (const p of ownerPaths(input, input.id)) revalidatePath(p);
+  return {};
+}
+
+/**
+ * Permanently remove a need. Anything tied to it (promises, journal entries,
+ * milestones) is NOT deleted — it just detaches (need_id becomes null),
+ * matching the "on delete set null" foreign keys. Only the need record itself
+ * is gone.
+ */
+export async function deleteNeed(
+  input: Owner & { id: string },
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in." };
+
+  const { error } = await supabase
+    .from("needs")
+    .delete()
+    .eq("id", input.id)
+    .eq("user_id", user.id);
+  if (error) return { error: "Couldn't remove that need." };
+
+  for (const p of ownerPaths(input)) revalidatePath(p);
   return {};
 }

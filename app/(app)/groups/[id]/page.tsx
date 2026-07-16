@@ -7,6 +7,7 @@ import { MemberManager, EditableGroupHeader } from "@/components/groups-ui";
 import { VerseAttach } from "@/components/verse-attach";
 import { MilestoneComposer } from "@/components/milestone-composer";
 import { DeleteMilestoneButton } from "@/components/delete-milestone-button";
+import { NeedsList } from "@/components/needs-list";
 import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,7 @@ export default async function GroupPage({
     { data: journal },
     { data: events },
     { data: milestones },
+    { data: needs },
   ] = await Promise.all([
     supabase
       .from("group_members")
@@ -104,7 +106,7 @@ export default async function GroupPage({
       .order("name", { ascending: true }),
     supabase
       .from("promises")
-      .select("id, title, status")
+      .select("id, title, status, need:needs ( id, title )")
       .eq("group_id", id)
       .order("created_at", { ascending: false }),
     supabase
@@ -122,6 +124,11 @@ export default async function GroupPage({
       .select("id, milestone_type, title, note, occurred_on")
       .eq("group_id", id)
       .order("occurred_on", { ascending: false }),
+    supabase
+      .from("needs")
+      .select("id, title, description, status")
+      .eq("group_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const members = ((memberRows ?? []) as unknown[]).map((row) => {
@@ -213,21 +220,40 @@ export default async function GroupPage({
 
       <div className="grid gap-8 md:grid-cols-[1fr_340px]">
         <div>
+          <NeedsList
+            groupId={group.id}
+            name={group.name}
+            needs={(needs ?? []) as {
+              id: string;
+              title: string;
+              description: string | null;
+              status: "active" | "resolved" | "archived";
+            }[]}
+          />
+
           {active.length > 0 && (
             <section className="mb-8">
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Open promises
               </h2>
               <div className="space-y-2">
-                {active.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/promises/${p.id}/edit?from=/groups/${group.id}`}
-                    className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
-                  >
-                    <span className="text-foreground">{p.title}</span>
-                  </Link>
-                ))}
+                {active.map((p) => {
+                  const needRel = Array.isArray(p.need) ? p.need[0] : p.need;
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/promises/${p.id}/edit?from=/groups/${group.id}`}
+                      className="block rounded-lg border border-border bg-card px-4 py-3 transition hover:border-primary"
+                    >
+                      <span className="text-foreground">{p.title}</span>
+                      {needRel && (
+                        <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                          {needRel.title}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </section>
           )}
