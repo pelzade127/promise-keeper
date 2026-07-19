@@ -17,6 +17,9 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://promise-keeper-flax.vercel.app",
+  ),
   title: "Promise Keeper",
   description: "Remember the people attached to your promises.",
 };
