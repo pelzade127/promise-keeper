@@ -8,6 +8,9 @@ import { VerseAttach } from "@/components/verse-attach";
 import { MilestoneComposer } from "@/components/milestone-composer";
 import { DeleteMilestoneButton } from "@/components/delete-milestone-button";
 import { NeedsList } from "@/components/needs-list";
+import { RelationshipCard } from "@/components/relationship-card";
+import { CareActionComposer } from "@/components/care-action-composer";
+import { relativeDate, monthYear } from "@/lib/relative-time";
 import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +51,13 @@ const JOURNAL_LABEL: Record<string, string> = {
   prayer: "Prayer",
   update: "Update",
   memory: "Memory",
+  checked_in: "Checked in",
+  sent_encouragement: "Sent encouragement",
+  called: "Called",
+  visited: "Visited",
+  celebrated: "Celebrated",
+  delivered_meal: "Delivered a meal",
+  sent_resource: "Sent a resource",
 };
 
 function formatDate(at: string): string {
@@ -73,7 +83,7 @@ export default async function PersonPage({
 
   const { data: person } = await supabase
     .from("people")
-    .select("id, name, relationship_note, status, created_at")
+    .select("id, name, relationship_note, status, relationship_status, created_at")
     .eq("id", id)
     .single();
 
@@ -120,6 +130,18 @@ export default async function PersonPage({
   const keptCount = (events ?? []).filter(
     (e) => e.event_type === "completed",
   ).length;
+
+  const allNeeds = needs ?? [];
+  const activeNeeds = allNeeds.filter((n) => n.status === "active");
+  const resolvedNeedsCount = allNeeds.filter((n) => n.status === "resolved").length;
+  // Most recently created active need — the story currently in motion.
+  const currentJourneyNeed = activeNeeds[0] ?? null;
+  // Most recent act of care (events are already ordered newest-first).
+  const lastCareEvent = (events ?? []).find(
+    (e) => e.event_type === "completed" || e.event_type === "care_occurrence",
+  );
+
+  const personStatus = person.status === "memorialized" ? "Memorial" : "Living";
 
   // Merge events + journal entries + milestones into one timeline.
   const timeline: TimelineItem[] = [
@@ -186,6 +208,24 @@ export default async function PersonPage({
           Make a promise
         </Link>
       </header>
+
+      <div className="mb-8">
+        <RelationshipCard
+          personId={person.id}
+          relationshipNote={person.relationship_note}
+          relationshipStatus={person.relationship_status}
+          personStatus={personStatus}
+          firstAdded={monthYear(person.created_at)}
+          currentNeeds={activeNeeds.length}
+          resolvedNeeds={resolvedNeedsCount}
+          activePromises={active.length}
+          lastActOfCare={
+            lastCareEvent ? relativeDate(lastCareEvent.created_at as string) : null
+          }
+          currentJourney={currentJourneyNeed?.title ?? null}
+          needId={currentJourneyNeed?.id ?? null}
+        />
+      </div>
 
       <div className="grid gap-8 md:grid-cols-[1fr_340px]">
         <div>
@@ -284,6 +324,11 @@ export default async function PersonPage({
           {faithMode && (
             <VerseAttach personId={person.id} name={person.name} />
           )}
+          <CareActionComposer
+            personId={person.id}
+            name={person.name}
+            promises={active.map((p) => ({ id: p.id, title: p.title }))}
+          />
           <MilestoneComposer personId={person.id} name={person.name} />
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

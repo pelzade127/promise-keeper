@@ -29,24 +29,55 @@ export default async function YearInReviewPage({
   const start = `${year}-01-01`;
   const end = `${year + 1}-01-01`;
 
-  const [{ data: events }, { data: people }, { data: groups }, { data: milestones }] =
-    await Promise.all([
-      supabase
-        .from("promise_events")
-        .select("id, event_type, person_id, group_id, note, reflection, created_at")
-        .in("event_type", ["completed", "care_occurrence"])
-        .gte("created_at", start)
-        .lt("created_at", end)
-        .order("created_at", { ascending: false }),
-      supabase.from("people").select("id, name"),
-      supabase.from("groups").select("id, name"),
-      supabase
-        .from("milestones")
-        .select("id, person_id, group_id, milestone_type, title, note, occurred_on")
-        .gte("occurred_on", start)
-        .lt("occurred_on", end)
-        .order("occurred_on", { ascending: false }),
-    ]);
+  const [
+    { data: events },
+    { data: people },
+    { data: groups },
+    { data: milestones },
+    { data: needsCreated },
+    { data: needsResolved },
+  ] = await Promise.all([
+    supabase
+      .from("promise_events")
+      .select("id, event_type, person_id, group_id, note, reflection, created_at")
+      .in("event_type", ["completed", "care_occurrence"])
+      .gte("created_at", start)
+      .lt("created_at", end)
+      .order("created_at", { ascending: false }),
+    supabase.from("people").select("id, name"),
+    supabase.from("groups").select("id, name"),
+    supabase
+      .from("milestones")
+      .select("id, person_id, group_id, milestone_type, title, note, occurred_on")
+      .gte("occurred_on", start)
+      .lt("occurred_on", end)
+      .order("occurred_on", { ascending: false }),
+    // Needs touched this year — created, or resolved — is what the "This
+    // year..." narrative is built from. Two separate queries, merged, since
+    // a need could be created in one year and resolved in another.
+    supabase
+      .from("needs")
+      .select("id, person_id, group_id, title, status, created_at, resolved_at")
+      .gte("created_at", start)
+      .lt("created_at", end),
+    supabase
+      .from("needs")
+      .select("id, person_id, group_id, title, status, created_at, resolved_at")
+      .gte("resolved_at", start)
+      .lt("resolved_at", end),
+  ]);
+
+  const needsById = new Map<
+    string,
+    { id: string; person_id: string | null; group_id: string | null; title: string; status: string; created_at: string; resolved_at: string | null }
+  >();
+  for (const n of [...(needsCreated ?? []), ...(needsResolved ?? [])] as Record<
+    string,
+    unknown
+  >[]) {
+    needsById.set(n.id as string, n as never);
+  }
+  const needsThisYear = Array.from(needsById.values());
 
   const peopleName = new Map<string, string>();
   for (const p of people ?? []) peopleName.set(p.id as string, p.name as string);
@@ -61,6 +92,25 @@ export default async function YearInReviewPage({
 
   const completed = (events ?? []) as Record<string, unknown>[];
   const milestoneList = (milestones ?? []) as Record<string, unknown>[];
+
+  // "This year..." — built from real data, never generated. Each sentence is
+  // a fact: a need that reached resolution, named plainly.
+  const resolvedThisYear = needsThisYear.filter(
+    (n) => n.status === "resolved" && n.resolved_at && n.resolved_at >= start && n.resolved_at < end,
+  );
+  const resolutionSentences = resolvedThisYear.map(
+    (n) => `${whoOf(n.person_id, n.group_id)}'s ${n.title} journey reached resolution.`,
+  );
+
+  const touchedPeople = new Set(
+    needsThisYear.map((n) => n.person_id ?? n.group_id).filter(Boolean),
+  );
+  const stillActiveCount = needsThisYear.filter((n) => n.status === "active").length;
+
+  const summarySentence =
+    needsThisYear.length > 0
+      ? `You walked alongside ${touchedPeople.size} ${touchedPeople.size === 1 ? "person" : "people"} through ${needsThisYear.length} different need${needsThisYear.length === 1 ? "" : "s"}. ${resolvedThisYear.length} need${resolvedThisYear.length === 1 ? "" : "s"} reached resolution. ${stillActiveCount} journey${stillActiveCount === 1 ? "" : "s"} continue${stillActiveCount === 1 ? "s" : ""} today.`
+      : null;
 
   const peopleSet = new Set<string>();
   const groupSet = new Set<string>();
@@ -101,7 +151,8 @@ export default async function YearInReviewPage({
     })),
   ].sort((a, b) => (a.at < b.at ? 1 : -1));
 
-  const isEmpty = completed.length === 0 && milestoneList.length === 0;
+  const isEmpty =
+    completed.length === 0 && milestoneList.length === 0 && needsThisYear.length === 0;
 
   return (
     <div className="container py-10 sm:py-14">
@@ -143,6 +194,22 @@ export default async function YearInReviewPage({
         </p>
       ) : (
         <div className="space-y-10">
+          {(resolutionSentences.length > 0 || summarySentence) && (
+            <section className="rounded-lg border border-accent/30 bg-accent/5 p-6">
+              <p className="mb-3 font-display text-lg text-foreground">
+                This year…
+              </p>
+              <div className="space-y-2 text-foreground/90">
+                {resolutionSentences.map((s, i) => (
+                  <p key={i}>{s}</p>
+                ))}
+                {summarySentence && (
+                  <p className="pt-1 text-muted-foreground">{summarySentence}</p>
+                )}
+              </div>
+            </section>
+          )}
+
           <section>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {stats.map((s) => (

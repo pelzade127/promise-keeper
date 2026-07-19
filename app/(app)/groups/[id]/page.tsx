@@ -8,6 +8,7 @@ import { VerseAttach } from "@/components/verse-attach";
 import { MilestoneComposer } from "@/components/milestone-composer";
 import { DeleteMilestoneButton } from "@/components/delete-milestone-button";
 import { NeedsList } from "@/components/needs-list";
+import { CareActionComposer } from "@/components/care-action-composer";
 import { MILESTONE_LABEL } from "@/lib/milestones";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,13 @@ const JOURNAL_LABEL: Record<string, string> = {
   prayer: "Prayer",
   update: "Update",
   memory: "Memory",
+  checked_in: "Checked in",
+  sent_encouragement: "Sent encouragement",
+  called: "Called",
+  visited: "Visited",
+  celebrated: "Celebrated",
+  delivered_meal: "Delivered a meal",
+  sent_resource: "Sent a resource",
 };
 
 function formatDate(at: string): string {
@@ -318,6 +326,11 @@ export default async function GroupPage({
             candidates={candidates}
           />
           {faithMode && <VerseAttach groupId={group.id} name={group.name} />}
+          <CareActionComposer
+            groupId={group.id}
+            name={group.name}
+            promises={active.map((p) => ({ id: p.id, title: p.title }))}
+          />
           <MilestoneComposer groupId={group.id} name={group.name} />
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

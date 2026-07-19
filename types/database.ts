@@ -54,7 +54,9 @@ export interface CreatePromiseInput {
   followUpIntervalDays?: number;
 }
 export type JournalEntryType =
-  | "reflection" | "prayer" | "update" | "follow_up" | "note" | "memory";
+  | "reflection" | "prayer" | "update" | "follow_up" | "note" | "memory"
+  | "checked_in" | "sent_encouragement" | "called" | "visited"
+  | "celebrated" | "delivered_meal" | "sent_resource";
 export type PromiseEventType =
   | "created" | "completed" | "evolved" | "recommitted" | "released"
   | "missed" | "follow_up_completed" | "journal_added" | "memorialized"
@@ -84,12 +86,15 @@ export type Milestone = {
 export type MissedReason =
   | "forgot" | "got_busy" | "avoided" | "circumstances_changed" | "no_longer_relevant";
 
+export type RelationshipStatus = "active" | "dormant" | "reconnected" | "past";
+
 export type Person = {
   id: string;
   user_id: string;
   name: string;
   relationship_note: string | null;
   status: EntityStatus;
+  relationship_status: RelationshipStatus;
   memorialized_at: string | null;
   created_at: string;
   updated_at: string;

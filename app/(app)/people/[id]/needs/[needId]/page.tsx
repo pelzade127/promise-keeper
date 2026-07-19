@@ -34,6 +34,13 @@ const JOURNAL_LABEL: Record<string, string> = {
   prayer: "Prayer",
   update: "Update",
   memory: "Memory",
+  checked_in: "Checked in",
+  sent_encouragement: "Sent encouragement",
+  called: "Called",
+  visited: "Visited",
+  celebrated: "Celebrated",
+  delivered_meal: "Delivered a meal",
+  sent_resource: "Sent a resource",
 };
 
 function formatDate(at: string): string {

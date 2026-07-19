@@ -36,6 +36,7 @@ module.exports = {
     "hover:bg-accent/90",
     "hover:bg-muted",
     "hover:bg-primary/90",
+    "hover:bg-secondary/80",
     "hover:border-primary",
     "hover:border-primary/50",
     "hover:text-destructive",
